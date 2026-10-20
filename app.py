@@ -95,6 +95,8 @@ TEMPLATE = """
         .stat { background: white; border-radius: 12px; padding: 14px; text-align: center; border-top: 4px solid #0d47a1; }
         .stat.verde { border-top-color: #00c853; }
         .stat.laranja { border-top-color: #ff9800; }
+        .stat.roxo { border-top-color: #7b1fa2; }
+        .stat.azul { border-top-color: #0288d1; }
         .stat .valor { font-size: 1.4rem; font-weight: 700; }
         .stat .label { font-size: 0.75rem; color: #546e7a; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -103,6 +105,7 @@ TEMPLATE = """
         .caixa-box { background: #fff3e0; border: 2px solid #ff9800; padding: 14px; border-radius: 12px; text-align: center; }
         .caixa-box .valor { font-size: 1.6rem; font-weight: 700; color: #e65100; }
         .fechado { background: #e8f5e9; border: 2px solid #00c853; padding: 14px; border-radius: 12px; text-align: center; }
+        .pesquisa { margin-bottom: 12px; }
     </style>
 </head>
 <body>
@@ -158,7 +161,11 @@ def index():
         content = '<div class="fechado">Dia finalizado.</div><form method="POST" action="/reiniciar"><button class="btn-laranja">Reiniciar Venda</button></form>'
         return render_template_string(TEMPLATE, content=content)
 
+    busca = request.args.get("busca", "").strip().lower()
     produtos = Produto.query.order_by(Produto.nome).all()
+    if busca:
+        produtos = [p for p in produtos if busca in p.nome.lower()]
+
     boxes = ""
     for p in produtos:
         boxes += '<div class="produto-box"><h3>' + p.nome + '</h3><div class="preco">Kz ' + str(int(p.preco)) + '</div><div class="stock">Stock: ' + str(p.quantidade) + '</div>'
@@ -166,7 +173,7 @@ def index():
         boxes += '<form method="POST" action="/devolver/' + str(p.id) + '" style="margin:0;display:inline;"><button class="btn-laranja btn-pequeno">Devolver</button></form>'
         boxes += '<form method="POST" action="/eliminar_produto/' + str(p.id) + '" style="margin:0;display:inline;" onsubmit="return confirm(\'Eliminar?\')"><button class="btn-vermelho btn-pequeno">Eliminar</button></form></div>'
 
-    content = '<div class="card"><h2>Vender</h2><div class="grid">' + (boxes if boxes else '<p>Nenhum produto</p>') + '</div></div>'
+    content = '<div class="card"><h2>Vender</h2><form method="GET" class="pesquisa"><input name="busca" placeholder="Procurar produto..." value="' + busca + '"></form><div class="grid">' + (boxes if boxes else '<p>Nenhum produto encontrado</p>') + '</div></div>'
     return render_template_string(TEMPLATE, content=content)
 
 @app.route("/vender", methods=["POST"])
@@ -435,11 +442,18 @@ def dashboard():
     bruto = sum(v.valor_total for v in vendas)
     liquido = max(0, bruto - 5000)
     caixa = get_caixa(uid)
+    # Compra e Restos do dia
+    compras = Movimento.query.filter(Movimento.user_id==uid, Movimento.tipo=="compra", db.func.date(Movimento.data)==date.today()).all()
+    restos = Movimento.query.filter(Movimento.user_id==uid, Movimento.tipo=="resto", db.func.date(Movimento.data)==date.today()).all()
+    total_compras = sum(m.valor for m in compras)
+    total_restos = sum(m.valor for m in restos)
     content = '<h2 style="margin-bottom:10px;">Dashboard</h2><div class="grid">'
     content += '<div class="stat verde"><div class="label">Vendas Hoje</div><div class="valor">Kz ' + str(int(bruto)) + '</div></div>'
     content += '<div class="stat"><div class="label">Líquido (após -5.000)</div><div class="valor">Kz ' + str(int(liquido)) + '</div></div>'
     content += '<div class="stat laranja"><div class="label">Caixa</div><div class="valor">Kz ' + str(int(caixa.valor)) + '</div></div>'
-    content += '<div class="stat"><div class="label">Nº Vendas</div><div class="valor">' + str(len(vendas)) + '</div></div></div>'
+    content += '<div class="stat"><div class="label">Nº Vendas</div><div class="valor">' + str(len(vendas)) + '</div></div>'
+    content += '<div class="stat roxo"><div class="label">Compras Hoje</div><div class="valor">Kz ' + str(int(total_compras)) + '</div></div>'
+    content += '<div class="stat azul"><div class="label">Restos Hoje</div><div class="valor">Kz ' + str(int(total_restos)) + '</div></div></div>'
     content += '<form method="POST" action="/reiniciar_tudo" style="margin-top:12px;"><button class="btn-vermelho">Reiniciar Tudo</button></form>'
     return render_template_string(TEMPLATE, content=content)
 
