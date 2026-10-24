@@ -60,7 +60,7 @@ class Resto(db.Model):
     valor = db.Column(db.Float)
     data = db.Column(db.DateTime, default=datetime.utcnow)
 
-T = """<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cantina FC Pira</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,sans-serif}body{background:#f4f6f8;color:#222}.top{background:#0d47a1;color:#fff;padding:12px 16px;position:sticky;top:0;z-index:50}.top h1{font-size:1.1rem}.nav{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.nav a{background:rgba(255,255,255,.15);color:#fff;padding:5px 11px;border-radius:16px;text-decoration:none;font-size:.75rem}.c{max-width:920px;margin:0 auto;padding:12px}.card{background:#fff;border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05)}.card h2{font-size:1rem;margin-bottom:10px;color:#0d47a1}input,button{width:100%;padding:10px;margin:4px 0;border-radius:7px;border:1px solid #ddd;font-size:14px}button{background:#1565c0;color:#fff;border:none;font-weight:500;cursor:pointer}.g{background:#2e7d32}.o{background:#e65100}.r{background:#c62828}.s{width:auto;padding:6px 10px;font-size:12px;margin:2px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px}.box{background:#fff;border:1px solid #e3f2fd;border-radius:10px;padding:10px;text-align:center}.box b{display:block;color:#0d47a1;margin-bottom:3px}.box div{font-size:.75rem;color:#555;margin:2px 0}.stat{background:#fff;border-radius:10px;padding:12px;text-align:center;border-top:3px solid #1565c0}.stat b{display:block;font-size:1.2rem;margin-top:3px;color:#0d47a1}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#e3f2fd;padding:7px;text-align:left}td{padding:7px;border-bottom:1px solid #eee}.flash{background:#e8f5e9;padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:.85rem}</style></head><body>{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a><a href="/hoje">Hoje</a><a href="/relatorio">Relatório</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div></body></html>"""
+T = """<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cantina FC Pira</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,sans-serif}body{background:#f4f6f8;color:#222}.top{background:#0d47a1;color:#fff;padding:12px 16px;position:sticky;top:0;z-index:50}.top h1{font-size:1.1rem}.nav{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.nav a{background:rgba(255,255,255,.15);color:#fff;padding:5px 11px;border-radius:16px;text-decoration:none;font-size:.75rem}.c{max-width:920px;margin:0 auto;padding:12px}.card{background:#fff;border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05)}.card h2{font-size:1rem;margin-bottom:10px;color:#0d47a1}input,button{width:100%;padding:10px;margin:4px 0;border-radius:7px;border:1px solid #ddd;font-size:14px}button{background:#1565c0;color:#fff;border:none;font-weight:500;cursor:pointer}.g{background:#2e7d32}.o{background:#e65100}.r{background:#c62828}.s{width:auto;padding:6px 10px;font-size:12px;margin:2px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px}.box{background:#fff;border:1px solid #e3f2fd;border-radius:10px;padding:10px;text-align:center}.box b{display:block;color:#0d47a1;margin-bottom:3px}.box div{font-size:.75rem;color:#555;margin:2px 0}.stat{background:#fff;border-radius:10px;padding:12px;text-align:center;border-top:3px solid #1565c0}.stat b{display:block;font-size:1.2rem;margin-top:3px;color:#0d47a1}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#e3f2fd;padding:7px;text-align:left}td{padding:7px;border-bottom:1px solid #eee}.flash{background:#e8f5e9;padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:.85rem}</style></head><body>{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a><a href="/hoje">Hoje</a><a href="/historico">Histórico</a><a href="/relatorio">Relatório</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/calculadora">Calculadora</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div></body></html>"""
 
 def dia_fechado(uid):
     return FechamentoDia.query.filter_by(user_id=uid, data=date.today()).first() is not None
@@ -119,8 +119,8 @@ def hoje():
     uid = session["user_id"]
     vendas = Venda.query.filter(Venda.user_id==uid, db.func.date(Venda.data)==date.today()).all()
     bruto = sum(v.valor_total for v in vendas)
-    linhas = "".join("<tr><td>"+v.produto.nome+"</td><td>"+str(v.quantidade)+"</td><td>Kz "+str(int(v.valor_total))+"</td></tr>" for v in vendas)
-    return render_template_string(T, content='<div class="card"><h2>Hoje</h2><p>Bruto: <b>Kz '+str(int(bruto))+'</b></p><p>Líquido: <b>Kz '+str(int(max(0,bruto-5000)))+'</b></p><form method="POST" action="/finalizar"><button class="o">Finalizar Dia</button></form><table><tr><th>Produto</th><th>Qtd</th><th>Valor</th></tr>'+linhas+'</table></div>')
+    linhas = "".join("<tr><td>"+v.produto.nome+"</td><td>"+str(v.quantidade)+"</td><td>Kz "+str(int(v.valor_total))+"</td><td>"+v.data.strftime("%H:%M")+"</td></tr>" for v in vendas)
+    return render_template_string(T, content='<div class="card"><h2>Hoje</h2><p>Bruto: <b>Kz '+str(int(bruto))+'</b></p><p>Líquido: <b>Kz '+str(int(max(0,bruto-5000)))+'</b></p><form method="POST" action="/finalizar"><button class="o">Finalizar Dia</button></form><table><tr><th>Produto</th><th>Qtd</th><th>Valor</th><th>Hora</th></tr>'+linhas+'</table></div>')
 
 @app.route("/finalizar", methods=["POST"])
 def finalizar():
@@ -136,6 +136,58 @@ def finalizar():
     db.session.add(FechamentoDia(user_id=uid, data=date.today(), total_bruto=bruto, total_liquido=max(0,bruto-5000), caixa=caixa.valor, qtd_vendas=len(vendas)))
     db.session.commit()
     return redirect("/hoje")
+
+@app.route("/historico")
+def historico():
+    if "user_id" not in session: return redirect("/login")
+    uid = session["user_id"]
+    data_filtro = request.args.get("data", "")
+    produto_filtro = request.args.get("produto", "")
+    query = Venda.query.filter_by(user_id=uid)
+    if data_filtro:
+        try:
+            d = datetime.strptime(data_filtro, "%Y-%m-%d").date()
+            query = query.filter(db.func.date(Venda.data) == d)
+        except:
+            pass
+    if produto_filtro:
+        query = query.join(Produto).filter(Produto.nome.ilike("%"+produto_filtro+"%"))
+    vendas = query.order_by(Venda.data.desc()).limit(200).all()
+    linhas = "".join("<tr><td>"+v.data.strftime("%d/%m/%Y")+"</td><td>"+v.data.strftime("%H:%M")+"</td><td>"+v.produto.nome+"</td><td>"+str(v.quantidade)+"</td><td>Kz "+str(int(v.valor_total))+"</td></tr>" for v in vendas)
+    content = '<div class="card"><h2>Histórico de Vendas</h2>'
+    content += '<form method="GET"><input type="date" name="data" value="'+data_filtro+'"><input name="produto" placeholder="Nome do produto" value="'+produto_filtro+'"><button>Pesquisar</button></form>'
+    content += '<form method="POST" action="/limpar-historico" onsubmit="return confirm(\'Apagar todo o histórico?\');"><button class="r" style="margin-top:8px">Limpar Histórico</button></form>'
+    content += '<table><tr><th>Data</th><th>Hora</th><th>Produto</th><th>Qtd</th><th>Valor</th></tr>'+linhas+'</table></div>'
+    return render_template_string(T, content=content)
+
+@app.route("/limpar-historico", methods=["POST"])
+def limpar_historico():
+    if "user_id" not in session: return redirect("/login")
+    Venda.query.filter_by(user_id=session["user_id"]).delete()
+    db.session.commit()
+    flash("Histórico limpo")
+    return redirect("/historico")
+
+@app.route("/calculadora")
+def calculadora():
+    if "user_id" not in session: return redirect("/login")
+    content = '''<div class="card"><h2>Calculadora</h2>
+    <input id="display" readonly style="text-align:right;font-size:1.4rem;margin-bottom:8px">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+        <button onclick="add('7')">7</button><button onclick="add('8')">8</button><button onclick="add('9')">9</button><button onclick="add('+')" class="o">+</button>
+        <button onclick="add('4')">4</button><button onclick="add('5')">5</button><button onclick="add('6')">6</button><button onclick="add('-')" class="o">-</button>
+        <button onclick="add('1')">1</button><button onclick="add('2')">2</button><button onclick="add('3')">3</button><button onclick="add('*')" class="o">×</button>
+        <button onclick="add('0')">0</button><button onclick="add('.')">.</button><button onclick="calc()" class="g">=</button><button onclick="add('/')" class="o">÷</button>
+        <button onclick="clearD()" class="r" style="grid-column:span 2">C</button>
+        <button onclick="back()" style="grid-column:span 2">←</button>
+    </div>
+    <script>
+    function add(v){document.getElementById('display').value+=v}
+    function clearD(){document.getElementById('display').value=''}
+    function back(){var d=document.getElementById('display');d.value=d.value.slice(0,-1)}
+    function calc(){try{document.getElementById('display').value=eval(document.getElementById('display').value)}catch(e){document.getElementById('display').value='Erro'}}
+    </script></div>'''
+    return render_template_string(T, content=content)
 
 @app.route("/relatorio")
 def relatorio():
