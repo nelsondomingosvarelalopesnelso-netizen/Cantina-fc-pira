@@ -383,4 +383,142 @@ def restos():
 @app.route("/dashboard")
 def dashboard():
     if "user_id" not in session: return redirect("/login")
-    if
+    if not is_admin():
+        return render_template_string(T, content='<div class="card"><h2>Bem-vindo</h2><p>Usa o menu para vender.</p></div>')
+    uid = session["user_id"]
+    vendas = Venda.query.filter(db.func.date(Venda.data)==date.today()).all()
+    bruto = sum(v.valor_total for v in vendas)
+    lucro = sum(v.lucro or 0 for v in vendas)
+    caixa = Caixa.query.filter_by(user_id=uid).first()
+    cv = caixa.valor if caixa else 0
+    inicio = date.today() - timedelta(days=6)
+    semana = []
+    for i in range(7):
+        d = inicio + timedelta(days=i)
+        total = sum(v.valor_total for v in Venda.query.filter(db.func.date(Venda.data)==d).all())
+        semana.append((d.strftime("%d/%m"), int(total)))
+    max_v = max([s[1] for s in semana] or [1])
+    barras = "".join('<div style="display:inline-block;width:40px;text-align:center;margin:0 4px"><div style="background:#1565c0;height:'+str(max(5,int(80*s[1]/max_v)))+'px;border-radius:4px"></div><div style="font-size:.7rem">'+s[0]+'</div></div>' for s in semana)
+    return render_template_string(T, content='<h2>Dashboard</h2><div class="grid"><div class="stat">Vendas Hoje<b>Kz '+str(int(bruto))+'</b></div><div class="stat">Lucro<b>Kz '+str(int(lucro))+'</b></div><div class="stat">Caixa<b>Kz '+str(int(cv))+'</b></div><div class="stat">Nº Vendas<b>'+str(len(vendas))+'</b></div></div><div class="card" style="margin-top:12px"><h2>Vendas da Semana</h2><div style="display:flex;align-items:flex-end;height:100px">'+barras+'</div></div>')
+
+@app.route("/exportar")
+def exportar():
+    if not is_admin(): return redirect("/")
+    return render_template_string(T, content='<div class="card"><h2>Exportar</h2><p><a href="/exportar-csv">Descarregar Excel (CSV)</a></p></div>')
+
+@app.route("/exportar-csv")
+def exportar_csv():
+    if not is_admin(): return redirect("/")
+    vendas = Venda.query.order_by(Venda.data.desc()).all()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Data", "Hora", "Produto", "Quantidade", "Valor", "Lucro"])
+    for v in vendas:
+        writer.writerow([v.data.strftime("%d/%m/%Y"), v.data.strftime("%H:%M"), v.produto.nome, v.quantidade, v.valor_total, v.lucro or 0])
+    return Response(output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=vendas.csv"})
+
+@app.route("/utilizadores")
+def utilizadores():
+    if not is_admin(): return redirect("/")
+    users = Usuario.query.all()
+    linhas = ""
+    for u in users:
+        linhas += '<tr><td>'+u.nome+'</td><td>'+u.email+'</td><td>'+(u.tipo or "funcionario")+'</td><td><a href="/permissoes/'+str(u.id)+'">Permissões</a> | <a href="/redefinir/'+str(u.id)+'">Senha</a></td></tr>'
+    return render_template_string(T, content='<div class="card"><h2>Utilizadores</h2><table><tr><th>Nome</th><th>Email</th><th>Tipo</th><th>Ações</th></tr>'+linhas+'</table></div>')
+
+@app.route("/permissoes/<int:id>", methods=["GET","POST"])
+def permissoes(id):
+    if not is_admin(): return redirect("/")
+    u = Usuario.query.get_or_404(id)
+    if u.tipo == "admin":
+        return render_template_string(T, content='<div class="card"><p>O administrador tem acesso total.</p><a href="/utilizadores">Voltar</a></div>')
+    if request.method == "POST":
+        u.perm_historico = "perm_historico" in request.form
+        u.perm_relatorio = "perm_relatorio" in request.form
+        u.perm_lucro = "perm_lucro" in request.form
+        u.perm_produtos = "perm_produtos" in request.form
+        u.perm_stock = "perm_stock" in request.form
+        u.perm_caixa = "perm_caixa" in request.form
+        db.session.commit()
+        flash("Permissões atualizadas para "+u.nome)
+        return redirect("/utilizadores")
+    checks = ""
+    for p, label in [("perm_historico","Histórico"),("perm_relatorio","Relatório"),("perm_lucro","Lucro"),("perm_produtos","Produtos"),("perm_stock","Stock"),("perm_caixa","Caixa")]:
+        checked = " checked" if getattr(u, p) else ""
+        checks += '<label style="display:block;margin:8px 0"><input type="checkbox" name="'+p+'"'+checked+'> '+label+'</label>'
+    return render_template_string(T, content='<div class="card"><h2>Permissões de '+u.nome+'</h2><form method="POST">'+checks+'<button>Guardar</button></form><p style="margin-top:10px"><a href="/utilizadores">Voltar</a></p></div>')
+
+@app.route("/redefinir/<int:id>", methods=["GET","POST"])
+def redefinir(id):
+    if not is_admin(): return redirect("/")
+    u = Usuario.query.get_or_404(id)
+    if request.method == "POST":
+        u.senha = generate_password_hash(request.form["senha"])
+        db.session.commit()
+        flash("Senha redefinida para "+u.nome)
+        return redirect("/utilizadores")
+    return render_template_string(T, content='<div class="card"><h2>Redefinir senha de '+u.nome+'</h2><form method="POST"><input type="password" name="senha" placeholder="Nova senha" required><button>Guardar</button></form><p style="margin-top:10px"><a href="/utilizadores">Voltar</a></p></div>')
+
+@app.route("/tornar-admin/<email>")
+def tornar_admin(email):
+    u = Usuario.query.filter_by(email=email).first()
+    if u:
+        u.tipo = "admin"
+        db.session.commit()
+        return "Admin definido para " + email
+    return "Utilizador não encontrado"
+
+@app.route("/login", methods=["GET","POST"])
+def login():
+    if request.method == "POST":
+        u = Usuario.query.filter_by(email=request.form["email"]).first()
+        if u and check_password_hash(u.senha, request.form["senha"]):
+            session["user_id"] = u.id
+            session["nome"] = u.nome
+            session["tipo"] = u.tipo or "funcionario"
+            session["perm_historico"] = u.perm_historico or False
+            session["perm_relatorio"] = u.perm_relatorio or False
+            session["perm_lucro"] = u.perm_lucro or False
+            session["perm_produtos"] = u.perm_produtos or False
+            session["perm_stock"] = u.perm_stock or False
+            session["perm_caixa"] = u.perm_caixa or False
+            return redirect("/dashboard")
+        flash("Email ou senha incorretos")
+    return render_template_string(T, content='<div class="card" style="max-width:360px;margin:30px auto"><h2>Entrar</h2><form method="POST"><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><button>Entrar</button></form><p style="text-align:center;margin-top:10px"><a href="/registrar">Criar conta</a></p></div>')
+
+@app.route("/registrar", methods=["GET","POST"])
+def registrar():
+    if request.method == "POST":
+        if not Usuario.query.filter_by(email=request.form["email"]).first():
+            tipo = "admin" if Usuario.query.count() == 0 else "funcionario"
+            db.session.add(Usuario(nome=request.form["nome"], email=request.form["email"], senha=generate_password_hash(request.form["senha"]), tipo=tipo))
+            db.session.commit()
+            flash("Conta criada")
+            return redirect("/login")
+        flash("Email já existe")
+    return render_template_string(T, content='<div class="card" style="max-width:360px;margin:30px auto"><h2>Criar Conta</h2><form method="POST"><input name="nome" placeholder="Nome" required><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><button>Registar</button></form></div>')
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
+if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
+        try:
+            db.session.execute(db.text("ALTER TABLE produto ADD COLUMN IF NOT EXISTS preco_compra FLOAT DEFAULT 0"))
+            db.session.execute(db.text("ALTER TABLE produto ADD COLUMN IF NOT EXISTS stock_minimo INTEGER DEFAULT 5"))
+            db.session.execute(db.text("ALTER TABLE produto ADD COLUMN IF NOT EXISTS categoria_id INTEGER"))
+            db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS tipo VARCHAR(20) DEFAULT 'funcionario'"))
+            db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_historico BOOLEAN DEFAULT FALSE"))
+            db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_relatorio BOOLEAN DEFAULT FALSE"))
+            db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_lucro BOOLEAN DEFAULT FALSE"))
+            db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_produtos BOOLEAN DEFAULT FALSE"))
+            db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_stock BOOLEAN DEFAULT FALSE"))
+            db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_caixa BOOLEAN DEFAULT FALSE"))
+            db.session.execute(db.text("ALTER TABLE venda ADD COLUMN IF NOT EXISTS lucro FLOAT DEFAULT 0"))
+            db.session.commit()
+        except:
+            db.session.rollback()
+    app.run(host="0.0.0.0", port=5001, debug=True)
