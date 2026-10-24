@@ -386,7 +386,20 @@ def dashboard():
     content += '<div class="stat laranja"><div class="label">Caixa</div><div class="valor">Kz ' + str(int(caixa_valor)) + '</div></div>'
     content += '<div class="stat roxo"><div class="label">Compras</div><div class="valor">Kz ' + str(int(total_compras)) + '</div></div>'
     content += '<div class="stat"><div class="label">Restos</div><div class="valor">Kz ' + str(int(total_restos)) + '</div></div></div>'
+    content += '<form method="POST" action="/reiniciar-dashboard" style="margin-top:15px;"><button class="btn-vermelho">Reiniciar Dashboard</button></form>'
     return render_template_string(TEMPLATE, content=content)
+
+@app.route("/reiniciar-dashboard", methods=["POST"])
+def reiniciar_dashboard():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    uid = session["user_id"]
+    Venda.query.filter(Venda.user_id == uid, db.func.date(Venda.data) == date.today()).delete()
+    Compra.query.filter(Compra.user_id == uid, db.func.date(Compra.data) == date.today()).delete()
+    Resto.query.filter(Resto.user_id == uid, db.func.date(Resto.data) == date.today()).delete()
+    db.session.commit()
+    flash("Dashboard reiniciado")
+    return redirect(url_for("dashboard"))
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -421,4 +434,9 @@ def logout():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
+        try:
+            db.session.execute(db.text("ALTER TABLE produto ADD COLUMN IF NOT EXISTS preco_compra FLOAT DEFAULT 0"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
     app.run(host="0.0.0.0", port=5001, debug=True)
