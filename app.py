@@ -384,4 +384,41 @@ def dashboard():
     content += '<div class="stat verde"><div class="label">Vendas Hoje</div><div class="valor">Kz ' + str(int(bruto)) + '</div></div>'
     content += '<div class="stat"><div class="label">Nº Vendas</div><div class="valor">' + str(len(vendas)) + '</div></div>'
     content += '<div class="stat laranja"><div class="label">Caixa</div><div class="valor">Kz ' + str(int(caixa_valor)) + '</div></div>'
-    content += '<div class="stat roxo"><div class="label">Compras</div><div class="valor">Kz ' + str(
+    content += '<div class="stat roxo"><div class="label">Compras</div><div class="valor">Kz ' + str(int(total_compras)) + '</div></div>'
+    content += '<div class="stat"><div class="label">Restos</div><div class="valor">Kz ' + str(int(total_restos)) + '</div></div></div>'
+    return render_template_string(TEMPLATE, content=content)
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        user = Usuario.query.filter_by(email=request.form["email"]).first()
+        if user and check_password_hash(user.senha, request.form["senha"]):
+            session["user_id"] = user.id
+            session["nome"] = user.nome
+            return redirect(url_for("dashboard"))
+        flash("Email ou senha incorretos", "erro")
+    content = '<div class="card" style="max-width:380px;margin:30px auto;"><h2>Entrar — Cantina FC Pira</h2><form method="POST"><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><button>Entrar</button></form><p style="text-align:center;margin-top:10px"><a href="/registrar">Criar conta</a></p></div>'
+    return render_template_string(TEMPLATE, content=content)
+
+@app.route("/registrar", methods=["GET", "POST"])
+def registrar():
+    if request.method == "POST":
+        if Usuario.query.filter_by(email=request.form["email"]).first():
+            flash("Email já existe", "erro")
+        else:
+            db.session.add(Usuario(nome=request.form["nome"], email=request.form["email"], senha=generate_password_hash(request.form["senha"])))
+            db.session.commit()
+            flash("Conta criada!")
+            return redirect(url_for("login"))
+    content = '<div class="card" style="max-width:380px;margin:30px auto;"><h2>Criar Conta</h2><form method="POST"><input name="nome" placeholder="Nome" required><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><button>Registrar</button></form><p style="text-align:center;margin-top:10px"><a href="/login">Já tenho conta</a></p></div>'
+    return render_template_string(TEMPLATE, content=content)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
+    app.run(host="0.0.0.0", port=5001, debug=True)
