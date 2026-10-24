@@ -60,7 +60,7 @@ class Resto(db.Model):
     valor = db.Column(db.Float)
     data = db.Column(db.DateTime, default=datetime.utcnow)
 
-T = """<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cantina</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:sans-serif}body{background:#f5f5f5}.top{background:#1565c0;color:#fff;padding:10px}.nav{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.nav a{background:rgba(255,255,255,.2);color:#fff;padding:5px 9px;border-radius:14px;text-decoration:none;font-size:.75rem}.c{max-width:900px;margin:0 auto;padding:10px}.card{background:#fff;border-radius:8px;padding:12px;margin-bottom:10px}input,button{width:100%;padding:9px;margin:3px 0;border-radius:6px;border:1px solid #ccc}button{background:#1565c0;color:#fff;border:none}.g{background:#00c853}.o{background:#ff9800}.r{background:#d32f2f}.s{width:auto;padding:5px 9px;font-size:12px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}.box{border:2px solid #bbdefb;border-radius:8px;padding:8px;text-align:center}.stat{background:#fff;border-radius:8px;padding:10px;text-align:center;border-top:3px solid #1565c0}table{width:100%;border-collapse:collapse}th,td{padding:6px;border-bottom:1px solid #eee}</style></head><body>{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a><a href="/hoje">Hoje</a><a href="/relatorio">Relatório</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="card">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div></body></html>"""
+T = """<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cantina FC Pira</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,sans-serif}body{background:#f4f6f8;color:#222}.top{background:#0d47a1;color:#fff;padding:12px 16px;position:sticky;top:0;z-index:50}.top h1{font-size:1.1rem}.nav{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.nav a{background:rgba(255,255,255,.15);color:#fff;padding:5px 11px;border-radius:16px;text-decoration:none;font-size:.75rem}.c{max-width:920px;margin:0 auto;padding:12px}.card{background:#fff;border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05)}.card h2{font-size:1rem;margin-bottom:10px;color:#0d47a1}input,button{width:100%;padding:10px;margin:4px 0;border-radius:7px;border:1px solid #ddd;font-size:14px}button{background:#1565c0;color:#fff;border:none;font-weight:500;cursor:pointer}.g{background:#2e7d32}.o{background:#e65100}.r{background:#c62828}.s{width:auto;padding:6px 10px;font-size:12px;margin:2px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px}.box{background:#fff;border:1px solid #e3f2fd;border-radius:10px;padding:10px;text-align:center}.box b{display:block;color:#0d47a1;margin-bottom:3px}.box div{font-size:.75rem;color:#555;margin:2px 0}.stat{background:#fff;border-radius:10px;padding:12px;text-align:center;border-top:3px solid #1565c0}.stat b{display:block;font-size:1.2rem;margin-top:3px;color:#0d47a1}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#e3f2fd;padding:7px;text-align:left}td{padding:7px;border-bottom:1px solid #eee}.flash{background:#e8f5e9;padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:.85rem}</style></head><body>{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a><a href="/hoje">Hoje</a><a href="/relatorio">Relatório</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div></body></html>"""
 
 def dia_fechado(uid):
     return FechamentoDia.query.filter_by(user_id=uid, data=date.today()).first() is not None
@@ -75,8 +75,8 @@ def index():
     if busca: q = q.filter(Produto.nome.ilike("%"+busca+"%"))
     boxes = ""
     for p in q.order_by(Produto.nome).all():
-        boxes += '<div class="box"><b>'+p.nome+'</b><div>Venda: '+str(int(p.preco))+'</div><div>Compra: '+str(int(p.preco_compra or 0))+'</div><div>Stock: '+str(p.quantidade)+'</div><form method="POST" action="/vender"><input type="hidden" name="produto_id" value="'+str(p.id)+'"><button class="g s">Vender</button></form><form method="POST" action="/devolver/'+str(p.id)+'"><button class="o s">Devolver</button></form><form method="POST" action="/eliminar/'+str(p.id)+'"><button class="r s">Eliminar</button></form></div>'
-    return render_template_string(T, content='<div class="card"><h2>Vender</h2><form method="GET"><input name="busca" placeholder="Pesquisar" value="'+busca+'"><button>OK</button></form><div class="grid">'+boxes+'</div></div>')
+        boxes += '<div class="box"><b>'+p.nome+'</b><div>Venda: Kz '+str(int(p.preco))+'</div><div>Compra: Kz '+str(int(p.preco_compra or 0))+'</div><div>Stock: '+str(p.quantidade)+'</div><form method="POST" action="/vender"><input type="hidden" name="produto_id" value="'+str(p.id)+'"><button class="g s">Vender</button></form><form method="POST" action="/devolver/'+str(p.id)+'"><button class="o s">Devolver</button></form><form method="POST" action="/eliminar/'+str(p.id)+'"><button class="r s">Eliminar</button></form></div>'
+    return render_template_string(T, content='<div class="card"><h2>Vender</h2><form method="GET"><input name="busca" placeholder="Pesquisar..." value="'+busca+'"><button>Pesquisar</button></form><div class="grid">'+boxes+'</div></div>')
 
 @app.route("/vender", methods=["POST"])
 def vender():
@@ -119,8 +119,8 @@ def hoje():
     uid = session["user_id"]
     vendas = Venda.query.filter(Venda.user_id==uid, db.func.date(Venda.data)==date.today()).all()
     bruto = sum(v.valor_total for v in vendas)
-    linhas = "".join("<tr><td>"+v.produto.nome+"</td><td>"+str(v.quantidade)+"</td><td>"+str(int(v.valor_total))+"</td></tr>" for v in vendas)
-    return render_template_string(T, content='<div class="card"><h2>Hoje</h2><p>Bruto: '+str(int(bruto))+'</p><p>Líquido: '+str(int(max(0,bruto-5000)))+'</p><form method="POST" action="/finalizar"><button class="o">Finalizar</button></form><table>'+linhas+'</table></div>')
+    linhas = "".join("<tr><td>"+v.produto.nome+"</td><td>"+str(v.quantidade)+"</td><td>Kz "+str(int(v.valor_total))+"</td></tr>" for v in vendas)
+    return render_template_string(T, content='<div class="card"><h2>Hoje</h2><p>Bruto: <b>Kz '+str(int(bruto))+'</b></p><p>Líquido: <b>Kz '+str(int(max(0,bruto-5000)))+'</b></p><form method="POST" action="/finalizar"><button class="o">Finalizar Dia</button></form><table><tr><th>Produto</th><th>Qtd</th><th>Valor</th></tr>'+linhas+'</table></div>')
 
 @app.route("/finalizar", methods=["POST"])
 def finalizar():
@@ -141,8 +141,8 @@ def finalizar():
 def relatorio():
     if "user_id" not in session: return redirect("/login")
     fs = FechamentoDia.query.filter_by(user_id=session["user_id"]).order_by(FechamentoDia.data_fechamento.desc()).all()
-    linhas = "".join("<tr><td>"+f.data.strftime("%d/%m/%Y")+"</td><td>"+str(int(f.total_liquido))+"</td><td>"+str(int(f.caixa))+"</td><td>"+str(f.qtd_vendas)+"</td></tr>" for f in fs)
-    return render_template_string(T, content='<div class="card"><h2>Relatório</h2><table>'+linhas+'</table></div>')
+    linhas = "".join("<tr><td>"+f.data.strftime("%d/%m/%Y")+"</td><td>Kz "+str(int(f.total_liquido))+"</td><td>Kz "+str(int(f.caixa))+"</td><td>"+str(f.qtd_vendas)+"</td></tr>" for f in fs)
+    return render_template_string(T, content='<div class="card"><h2>Relatório</h2><table><tr><th>Data</th><th>Líquido</th><th>Caixa</th><th>Vendas</th></tr>'+linhas+'</table></div>')
 
 @app.route("/caixa", methods=["GET","POST"])
 def caixa():
@@ -157,7 +157,7 @@ def caixa():
         c.valor = float(request.form["valor"])
         db.session.commit()
         return redirect("/caixa")
-    return render_template_string(T, content='<div class="card"><h2>Caixa</h2><p>'+str(int(c.valor))+'</p><form method="POST"><input type="number" name="valor" value="'+str(c.valor)+'"><button>Alterar</button></form></div>')
+    return render_template_string(T, content='<div class="card"><h2>Caixa</h2><p style="font-size:1.3rem;font-weight:600;color:#0d47a1">Kz '+str(int(c.valor))+'</p><form method="POST"><input type="number" name="valor" value="'+str(c.valor)+'"><button>Alterar</button></form></div>')
 
 @app.route("/produtos", methods=["GET","POST"])
 def produtos():
@@ -167,8 +167,8 @@ def produtos():
         db.session.commit()
         return redirect("/produtos")
     ps = Produto.query.order_by(Produto.nome).all()
-    linhas = "".join("<tr><td>"+p.nome+"</td><td>"+str(int(p.preco))+"</td><td>"+str(int(p.preco_compra or 0))+"</td><td>"+str(p.quantidade)+"</td><td><a href='/editar/"+str(p.id)+"'>Editar</a></td></tr>" for p in ps)
-    return render_template_string(T, content='<div class="card"><h2>Produtos</h2><form method="POST"><input name="nome" placeholder="Nome" required><input type="number" name="preco" placeholder="Preço venda" required><input type="number" name="preco_compra" placeholder="Preço compra"><input type="number" name="quantidade" placeholder="Qtd" required><button>Cadastrar</button></form><table>'+linhas+'</table></div>')
+    linhas = "".join("<tr><td>"+p.nome+"</td><td>Kz "+str(int(p.preco))+"</td><td>Kz "+str(int(p.preco_compra or 0))+"</td><td>"+str(p.quantidade)+"</td><td><a href='/editar/"+str(p.id)+"'>Editar</a></td></tr>" for p in ps)
+    return render_template_string(T, content='<div class="card"><h2>Produtos</h2><form method="POST"><input name="nome" placeholder="Nome" required><input type="number" name="preco" placeholder="Preço venda" required><input type="number" name="preco_compra" placeholder="Preço compra"><input type="number" name="quantidade" placeholder="Qtd" required><button>Cadastrar</button></form><table><tr><th>Nome</th><th>Venda</th><th>Compra</th><th>Stock</th><th></th></tr>'+linhas+'</table></div>')
 
 @app.route("/editar/<int:id>", methods=["GET","POST"])
 def editar(id):
@@ -187,8 +187,8 @@ def editar(id):
 def stock():
     if "user_id" not in session: return redirect("/login")
     ps = Produto.query.order_by(Produto.nome).all()
-    linhas = "".join("<tr><td>"+p.nome+"</td><td>"+str(p.quantidade)+"</td><td><form method='POST' action='/ajustar/"+str(p.id)+"'><input type='hidden' name='acao' value='mais'><button class='g s'>+</button></form><form method='POST' action='/ajustar/"+str(p.id)+"'><input type='hidden' name='acao' value='menos'><button class='r s'>-</button></form></td></tr>" for p in ps)
-    return render_template_string(T, content='<div class="card"><h2>Stock</h2><table>'+linhas+'</table></div>')
+    linhas = "".join("<tr><td>"+p.nome+"</td><td>"+str(p.quantidade)+"</td><td><form method='POST' action='/ajustar/"+str(p.id)+"' style='display:inline'><input type='hidden' name='acao' value='mais'><button class='g s'>+</button></form> <form method='POST' action='/ajustar/"+str(p.id)+"' style='display:inline'><input type='hidden' name='acao' value='menos'><button class='r s'>-</button></form></td></tr>" for p in ps)
+    return render_template_string(T, content='<div class="card"><h2>Stock</h2><table><tr><th>Produto</th><th>Qtd</th><th>Ajustar</th></tr>'+linhas+'</table></div>')
 
 @app.route("/ajustar/<int:id>", methods=["POST"])
 def ajustar(id):
@@ -207,8 +207,8 @@ def compras():
         db.session.commit()
         return redirect("/compras")
     items = Compra.query.filter_by(user_id=uid).order_by(Compra.data.desc()).all()
-    linhas = "".join("<tr><td>"+c.descricao+"</td><td>"+str(int(c.valor))+"</td></tr>" for c in items)
-    return render_template_string(T, content='<div class="card"><h2>Compras</h2><form method="POST"><input name="descricao" placeholder="Descrição" required><input type="number" name="valor" placeholder="Valor" required><button>Registar</button></form><table>'+linhas+'</table></div>')
+    linhas = "".join("<tr><td>"+c.descricao+"</td><td>Kz "+str(int(c.valor))+"</td><td>"+c.data.strftime("%d/%m/%Y")+"</td></tr>" for c in items)
+    return render_template_string(T, content='<div class="card"><h2>Compras</h2><form method="POST"><input name="descricao" placeholder="Descrição" required><input type="number" name="valor" placeholder="Valor" required><button>Registar</button></form><table><tr><th>Descrição</th><th>Valor</th><th>Data</th></tr>'+linhas+'</table></div>')
 
 @app.route("/restos", methods=["GET","POST"])
 def restos():
@@ -219,8 +219,8 @@ def restos():
         db.session.commit()
         return redirect("/restos")
     items = Resto.query.filter_by(user_id=uid).order_by(Resto.data.desc()).all()
-    linhas = "".join("<tr><td>"+r.descricao+"</td><td>"+str(int(r.valor))+"</td></tr>" for r in items)
-    return render_template_string(T, content='<div class="card"><h2>Restos</h2><form method="POST"><input name="descricao" placeholder="Descrição" required><input type="number" name="valor" placeholder="Valor" required><button>Registar</button></form><table>'+linhas+'</table></div>')
+    linhas = "".join("<tr><td>"+r.descricao+"</td><td>Kz "+str(int(r.valor))+"</td><td>"+r.data.strftime("%d/%m/%Y")+"</td></tr>" for r in items)
+    return render_template_string(T, content='<div class="card"><h2>Restos</h2><form method="POST"><input name="descricao" placeholder="Descrição" required><input type="number" name="valor" placeholder="Valor" required><button>Registar</button></form><table><tr><th>Descrição</th><th>Valor</th><th>Data</th></tr>'+linhas+'</table></div>')
 
 @app.route("/dashboard")
 def dashboard():
@@ -232,7 +232,7 @@ def dashboard():
     cv = caixa.valor if caixa else 0
     comps = Compra.query.filter(Compra.user_id==uid, db.func.date(Compra.data)==date.today()).all()
     rests = Resto.query.filter(Resto.user_id==uid, db.func.date(Resto.data)==date.today()).all()
-    content = '<div class="grid"><div class="stat">Vendas<br><b>'+str(int(bruto))+'</b></div><div class="stat">Nº<br><b>'+str(len(vendas))+'</b></div><div class="stat">Caixa<br><b>'+str(int(cv))+'</b></div><div class="stat">Compras<br><b>'+str(int(sum(c.valor for c in comps)))+'</b></div><div class="stat">Restos<br><b>'+str(int(sum(r.valor for r in rests)))+'</b></div></div><form method="POST" action="/reiniciar-dashboard"><button class="r">Reiniciar Dashboard</button></form>'
+    content = '<h2>Dashboard</h2><div class="grid"><div class="stat">Vendas Hoje<b>Kz '+str(int(bruto))+'</b></div><div class="stat">Nº Vendas<b>'+str(len(vendas))+'</b></div><div class="stat">Caixa<b>Kz '+str(int(cv))+'</b></div><div class="stat">Compras<b>Kz '+str(int(sum(c.valor for c in comps)))+'</b></div><div class="stat">Restos<b>Kz '+str(int(sum(r.valor for r in rests)))+'</b></div></div><form method="POST" action="/reiniciar-dashboard" style="margin-top:12px"><button class="r">Reiniciar Dashboard</button></form>'
     return render_template_string(T, content=content)
 
 @app.route("/reiniciar-dashboard", methods=["POST"])
@@ -253,7 +253,7 @@ def login():
             session["user_id"] = u.id
             session["nome"] = u.nome
             return redirect("/dashboard")
-    return render_template_string(T, content='<div class="card"><h2>Entrar</h2><form method="POST"><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><button>Entrar</button></form><a href="/registrar">Criar conta</a></div>')
+    return render_template_string(T, content='<div class="card" style="max-width:360px;margin:30px auto"><h2>Entrar</h2><form method="POST"><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><button>Entrar</button></form><p style="text-align:center;margin-top:10px"><a href="/registrar">Criar conta</a></p></div>')
 
 @app.route("/registrar", methods=["GET","POST"])
 def registrar():
@@ -262,7 +262,7 @@ def registrar():
             db.session.add(Usuario(nome=request.form["nome"], email=request.form["email"], senha=generate_password_hash(request.form["senha"])))
             db.session.commit()
             return redirect("/login")
-    return render_template_string(T, content='<div class="card"><h2>Criar conta</h2><form method="POST"><input name="nome" placeholder="Nome" required><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><button>Registar</button></form></div>')
+    return render_template_string(T, content='<div class="card" style="max-width:360px;margin:30px auto"><h2>Criar Conta</h2><form method="POST"><input name="nome" placeholder="Nome" required><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><button>Registar</button></form></div>')
 
 @app.route("/logout")
 def logout():
