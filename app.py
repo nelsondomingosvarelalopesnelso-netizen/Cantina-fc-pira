@@ -66,6 +66,7 @@ class FechamentoDia(db.Model):
     total_lucro = db.Column(db.Float, default=0)
     caixa = db.Column(db.Float)
     qtd_vendas = db.Column(db.Integer)
+    meta_atingida = db.Column(db.Boolean, default=False)
     data_fechamento = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Caixa(db.Model):
@@ -126,6 +127,8 @@ td{padding:7px;border-bottom:1px solid #eee}
 .btn-red{background:#c62828;color:#fff}
 .btn-purple{background:#6a1b9a;color:#fff}
 .btn:hover{opacity:.9}
+.parabens{background:linear-gradient(135deg,#4caf50,#8bc34a);color:#fff;padding:20px;border-radius:10px;text-align:center;margin-bottom:12px;font-size:1.1rem}
+.parabens h3{margin-bottom:8px;font-size:1.3rem}
 </style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="/calculadora">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div><script>function toggleDark(){document.getElementById('body').classList.toggle('dark');localStorage.setItem('dark',document.getElementById('body').classList.contains('dark'))}if(localStorage.getItem('dark')==='true')document.getElementById('body').classList.add('dark')</script></body></html>"""
 
 def is_admin():
@@ -220,7 +223,10 @@ def hoje():
     bruto = sum(v.valor_total for v in vendas)
     lucro = sum(v.lucro or 0 for v in vendas)
     linhas = "".join("<tr><td>"+v.produto.nome+"</td><td>"+str(v.quantidade)+"</td><td>Kz "+str(int(v.valor_total))+"</td><td>Kz "+str(int(v.lucro or 0))+"</td></tr>" for v in vendas)
-    return render_template_string(T, content='<div class="card"><h2>Hoje</h2><p>Bruto: <b>Kz '+str(int(bruto))+'</b></p><p>Lucro: <b>Kz '+str(int(lucro))+'</b></p><p>Liquido: <b>Kz '+str(int(max(0,bruto-5000)))+'</b></p><form method="POST" action="/finalizar"><button class="o">Finalizar Dia</button></form><table><tr><th>Produto</th><th>Qtd</th><th>Valor</th><th>Lucro</th></tr>'+linhas+'</table></div>')
+    meta_msg = ""
+    if bruto >= 48000:
+        meta_msg = '<div class="parabens"><h3>Parabens!</h3><p>Atingiste a meta do dia (48.000 Kz)!</p></div>'
+    return render_template_string(T, content=meta_msg+'<div class="card"><h2>Hoje</h2><p>Bruto: <b>Kz '+str(int(bruto))+'</b></p><p>Lucro: <b>Kz '+str(int(lucro))+'</b></p><p>Liquido: <b>Kz '+str(int(max(0,bruto-5000)))+'</b></p><form method="POST" action="/finalizar"><button class="o">Finalizar Dia</button></form><table><tr><th>Produto</th><th>Qtd</th><th>Valor</th><th>Lucro</th></tr>'+linhas+'</table></div>')
 
 @app.route("/finalizar", methods=["POST"])
 def finalizar():
@@ -233,9 +239,13 @@ def finalizar():
     if not caixa:
         caixa = Caixa(user_id=uid, valor=0)
         db.session.add(caixa)
-    caixa.valor += 5000
-    db.session.add(FechamentoDia(user_id=uid, data=date.today(), total_bruto=bruto, total_liquido=max(0,bruto-5000), total_lucro=lucro, caixa=caixa.valor, qtd_vendas=len(vendas)))
+    meta_atingida = bruto >= 48000
+    if bruto > 5000:
+        caixa.valor += 5000
+    db.session.add(FechamentoDia(user_id=uid, data=date.today(), total_bruto=bruto, total_liquido=max(0,bruto-5000) if bruto > 5000 else bruto, total_lucro=lucro, caixa=caixa.valor, qtd_vendas=len(vendas), meta_atingida=meta_atingida))
     db.session.commit()
+    if meta_atingida:
+        flash("Parabens! Atingiste a meta do dia (48.000 Kz)!")
     return redirect("/hoje")
 
 @app.route("/lucro")
@@ -282,8 +292,8 @@ def calculadora():
 def relatorio():
     if not tem_perm("perm_relatorio"): return redirect("/")
     fs = FechamentoDia.query.order_by(FechamentoDia.data_fechamento.desc()).all()
-    linhas = "".join("<tr><td>"+f.data.strftime("%d/%m/%Y")+"</td><td>Kz "+str(int(f.total_liquido))+"</td><td>Kz "+str(int(f.total_lucro or 0))+"</td><td>Kz "+str(int(f.caixa))+"</td><td>"+str(f.qtd_vendas)+"</td></tr>" for f in fs)
-    return render_template_string(T, content='<div class="card"><h2>Relatorio</h2><table><tr><th>Data</th><th>Liquido</th><th>Lucro</th><th>Caixa</th><th>Vendas</th></tr>'+linhas+'</table></div>')
+    linhas = "".join("<tr><td>"+f.data.strftime("%d/%m/%Y")+"</td><td>Kz "+str(int(f.total_liquido))+"</td><td>Kz "+str(int(f.total_lucro or 0))+"</td><td>Kz "+str(int(f.caixa))+"</td><td>"+str(f.qtd_vendas)+"</td><td>"+("Sim" if f.meta_atingida else "Nao")+"</td></tr>" for f in fs)
+    return render_template_string(T, content='<div class="card"><h2>Relatorio</h2><table><tr><th>Data</th><th>Liquido</th><th>Lucro</th><th>Caixa</th><th>Vendas</th><th>Meta</th></tr>'+linhas+'</table></div>')
 
 @app.route("/mensal")
 def mensal():
@@ -414,6 +424,10 @@ def dashboard():
     lucro = sum(v.lucro or 0 for v in vendas)
     caixa = Caixa.query.filter_by(user_id=uid).first()
     cv = caixa.valor if caixa else 0
+    compras_hoje = Compra.query.filter(db.func.date(Compra.data)==date.today()).all()
+    restos_hoje = Resto.query.filter(db.func.date(Resto.data)==date.today()).all()
+    total_compras = sum(c.valor for c in compras_hoje)
+    total_restos = sum(r.valor for r in restos_hoje)
     inicio = date.today() - timedelta(days=6)
     semana = []
     for i in range(7):
@@ -422,7 +436,10 @@ def dashboard():
         semana.append((d.strftime("%d/%m"), int(total)))
     max_v = max([s[1] for s in semana] or [1]) or 1
     barras = "".join('<div style="display:inline-block;width:40px;text-align:center;margin:0 4px"><div style="background:#1565c0;height:'+str(max(5,int(80*s[1]/max_v)))+'px;border-radius:4px"></div><div style="font-size:.7rem">'+s[0]+'</div></div>' for s in semana)
-    return render_template_string(T, content='<h2>Dashboard</h2><div class="grid"><div class="stat">Vendas Hoje<b>Kz '+str(int(bruto))+'</b></div><div class="stat">Lucro<b>Kz '+str(int(lucro))+'</b></div><div class="stat">Caixa<b>Kz '+str(int(cv))+'</b></div><div class="stat">N Vendas<b>'+str(len(vendas))+'</b></div></div><div class="card" style="margin-top:12px"><h2>Vendas da Semana</h2><div style="display:flex;align-items:flex-end;height:100px">'+barras+'</div></div><form method="POST" action="/reiniciar-dashboard" style="margin-top:12px"><button class="r">Reiniciar Dashboard</button></form>')
+    meta_msg = ""
+    if bruto >= 48000:
+        meta_msg = '<div class="parabens"><h3>Parabens!</h3><p>Meta do dia atingida (48.000 Kz)!</p></div>'
+    return render_template_string(T, content=meta_msg+'<h2>Dashboard</h2><div class="grid"><div class="stat">Vendas Hoje<b>Kz '+str(int(bruto))+'</b></div><div class="stat">Lucro<b>Kz '+str(int(lucro))+'</b></div><div class="stat">Caixa<b>Kz '+str(int(cv))+'</b></div><div class="stat">N Vendas<b>'+str(len(vendas))+'</b></div><div class="stat">Compras<b>Kz '+str(int(total_compras))+'</b></div><div class="stat">Restos<b>Kz '+str(int(total_restos))+'</b></div></div><div class="card" style="margin-top:12px"><h2>Vendas da Semana</h2><div style="display:flex;align-items:flex-end;height:100px">'+barras+'</div></div><form method="POST" action="/reiniciar-dashboard" style="margin-top:12px"><button class="r">Reiniciar Dashboard</button></form>')
 
 @app.route("/reiniciar-dashboard", methods=["POST"])
 def reiniciar_dashboard():
@@ -571,6 +588,7 @@ if __name__ == "__main__":
             db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_hoje BOOLEAN DEFAULT FALSE"))
             db.session.execute(db.text("ALTER TABLE venda ADD COLUMN IF NOT EXISTS lucro FLOAT DEFAULT 0"))
             db.session.execute(db.text("ALTER TABLE fechamento_dia ADD COLUMN IF NOT EXISTS total_lucro FLOAT DEFAULT 0"))
+            db.session.execute(db.text("ALTER TABLE fechamento_dia ADD COLUMN IF NOT EXISTS meta_atingida BOOLEAN DEFAULT FALSE"))
             db.session.commit()
         except:
             db.session.rollback()
