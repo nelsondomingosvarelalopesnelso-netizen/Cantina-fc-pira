@@ -119,6 +119,13 @@ th{background:#e3f2fd;padding:7px;text-align:left}
 td{padding:7px;border-bottom:1px solid #eee}
 .alerta{background:#ffebee;color:#c62828;padding:8px;border-radius:6px;margin-bottom:10px;font-size:.85rem}
 .flash{background:#e8f5e9;padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:.85rem}
+.btn{display:inline-block;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:500;margin:2px}
+.btn-blue{background:#1565c0;color:#fff}
+.btn-green{background:#2e7d32;color:#fff}
+.btn-orange{background:#e65100;color:#fff}
+.btn-red{background:#c62828;color:#fff}
+.btn-purple{background:#6a1b9a;color:#fff}
+.btn:hover{opacity:.9}
 </style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="/calculadora">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div><script>function toggleDark(){document.getElementById('body').classList.toggle('dark');localStorage.setItem('dark',document.getElementById('body').classList.contains('dark'))}if(localStorage.getItem('dark')==='true')document.getElementById('body').classList.add('dark')</script></body></html>"""
 
 def is_admin():
@@ -320,7 +327,7 @@ def produtos():
     ps = Produto.query.order_by(Produto.nome).all()
     cats = Categoria.query.all()
     cat_opts = "".join('<option value="'+str(c.id)+'">'+c.nome+'</option>' for c in cats)
-    linhas = "".join("<tr><td>"+p.nome+"</td><td>"+(p.categoria.nome if p.categoria else "-")+"</td><td>Kz "+str(int(p.preco))+"</td><td>Kz "+str(int(p.preco_compra or 0))+"</td><td>"+str(p.quantidade)+"</td>"+("<td><a href='/editar/"+str(p.id)+"'>Editar</a></td>" if is_admin() else "")+"</tr>" for p in ps)
+    linhas = "".join("<tr><td>"+p.nome+"</td><td>"+(p.categoria.nome if p.categoria else "-")+"</td><td>Kz "+str(int(p.preco))+"</td><td>Kz "+str(int(p.preco_compra or 0))+"</td><td>"+str(p.quantidade)+"</td>"+("<td><a href='/editar/"+str(p.id)+"' class='btn btn-blue'>Editar</a></td>" if is_admin() else "")+"</tr>" for p in ps)
     form = '<form method="POST"><input name="nome" placeholder="Nome" required><select name="categoria"><option value="">Categoria</option>'+cat_opts+'</select><input type="number" name="preco" placeholder="Preco venda" required><input type="number" name="preco_compra" placeholder="Preco compra"><input type="number" name="quantidade" placeholder="Qtd" required><input type="number" name="stock_minimo" placeholder="Stock minimo" value="5"><button>Cadastrar</button></form>' if is_admin() else ""
     return render_template_string(T, content='<div class="card"><h2>Produtos</h2>'+form+'<table><tr><th>Nome</th><th>Categoria</th><th>Venda</th><th>Compra</th><th>Stock</th>'+("<th></th>" if is_admin() else "")+'</tr>'+linhas+'</table></div>')
 
@@ -430,7 +437,7 @@ def reiniciar_dashboard():
 @app.route("/exportar")
 def exportar():
     if not is_admin(): return redirect("/")
-    return render_template_string(T, content='<div class="card"><h2>Exportar</h2><p><a href="/exportar-csv">Descarregar Excel (CSV)</a></p></div>')
+    return render_template_string(T, content='<div class="card"><h2>Exportar</h2><p><a href="/exportar-csv" class="btn btn-green">Descarregar Excel (CSV)</a></p></div>')
 
 @app.route("/exportar-csv")
 def exportar_csv():
@@ -449,7 +456,7 @@ def utilizadores():
     users = Usuario.query.all()
     linhas = ""
     for u in users:
-        linhas += '<tr><td>'+u.nome+'</td><td>'+u.email+'</td><td>'+(u.tipo or "funcionario")+'</td><td><a href="/permissoes/'+str(u.id)+'">Permissoes</a> | <a href="/redefinir/'+str(u.id)+'">Senha</a> | <a href="/dar-tudo/'+str(u.id)+'">Dar tudo</a></td></tr>'
+        linhas += '<tr><td>'+u.nome+'</td><td>'+u.email+'</td><td>'+(u.tipo or "funcionario")+'</td><td><a href="/permissoes/'+str(u.id)+'" class="btn btn-blue">Permissoes</a> <a href="/redefinir/'+str(u.id)+'" class="btn btn-orange">Senha</a> <a href="/dar-tudo/'+str(u.id)+'" class="btn btn-purple">Dar tudo</a></td></tr>'
     return render_template_string(T, content='<div class="card"><h2>Utilizadores</h2><table><tr><th>Nome</th><th>Email</th><th>Tipo</th><th>Acoes</th></tr>'+linhas+'</table></div>')
 
 @app.route("/dar-tudo/<int:id>")
@@ -473,7 +480,7 @@ def permissoes(id):
     if not is_admin(): return redirect("/")
     u = Usuario.query.get_or_404(id)
     if u.tipo == "admin":
-        return render_template_string(T, content='<div class="card"><p>O administrador tem acesso total.</p><a href="/utilizadores">Voltar</a></div>')
+        return render_template_string(T, content='<div class="card"><p>O administrador tem acesso total.</p><a href="/utilizadores" class="btn btn-blue">Voltar</a></div>')
     if request.method == "POST":
         u.perm_historico = "perm_historico" in request.form
         u.perm_relatorio = "perm_relatorio" in request.form
@@ -489,7 +496,7 @@ def permissoes(id):
     for p, label in [("perm_hoje","Hoje (finalizar dia)"),("perm_historico","Historico"),("perm_relatorio","Relatorio"),("perm_lucro","Lucro"),("perm_produtos","Produtos"),("perm_stock","Stock"),("perm_caixa","Caixa")]:
         checked = " checked" if getattr(u, p) else ""
         checks += '<label style="display:block;margin:8px 0"><input type="checkbox" name="'+p+'"'+checked+'> '+label+'</label>'
-    return render_template_string(T, content='<div class="card"><h2>Permissoes de '+u.nome+'</h2><form method="POST">'+checks+'<button>Guardar</button></form><p style="margin-top:10px"><a href="/utilizadores">Voltar</a></p></div>')
+    return render_template_string(T, content='<div class="card"><h2>Permissoes de '+u.nome+'</h2><form method="POST">'+checks+'<button>Guardar</button></form><p style="margin-top:10px"><a href="/utilizadores" class="btn btn-blue">Voltar</a></p></div>')
 
 @app.route("/redefinir/<int:id>", methods=["GET","POST"])
 def redefinir(id):
@@ -500,7 +507,7 @@ def redefinir(id):
         db.session.commit()
         flash("Senha redefinida para "+u.nome)
         return redirect("/utilizadores")
-    return render_template_string(T, content='<div class="card"><h2>Redefinir senha de '+u.nome+'</h2><form method="POST"><input type="password" name="senha" placeholder="Nova senha" required><button>Guardar</button></form><p style="margin-top:10px"><a href="/utilizadores">Voltar</a></p></div>')
+    return render_template_string(T, content='<div class="card"><h2>Redefinir senha de '+u.nome+'</h2><form method="POST"><input type="password" name="senha" placeholder="Nova senha" required><button>Guardar</button></form><p style="margin-top:10px"><a href="/utilizadores" class="btn btn-blue">Voltar</a></p></div>')
 
 @app.route("/tornar-admin/<email>")
 def tornar_admin(email):
