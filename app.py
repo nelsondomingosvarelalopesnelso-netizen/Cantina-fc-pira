@@ -34,6 +34,7 @@ class Produto(db.Model):
     nome = db.Column(db.String(120), nullable=False)
     preco = db.Column(db.Float, nullable=False)
     preco_compra = db.Column(db.Float, default=0)
+    unidades_caixa = db.Column(db.Integer, default=1)
     quantidade = db.Column(db.Integer, default=0)
     stock_minimo = db.Column(db.Integer, default=5)
     categoria_id = db.Column(db.Integer, db.ForeignKey("categoria.id"))
@@ -149,9 +150,15 @@ def tem_perm(perm):
 def dia_fechado(uid):
     return FechamentoDia.query.filter_by(user_id=uid, data=date.today()).first() is not None
 
-def calcular_margem(preco, preco_compra):
-    if preco_compra and preco_compra > 0 and preco > 0:
-        return ((preco - preco_compra) / preco) * 100
+def calcular_margem(preco, preco_compra, unidades_caixa):
+    if preco_compra and preco_compra > 0 and preco > 0 and unidades_caixa and unidades_caixa > 0:
+        custo_unidade = preco_compra / unidades_caixa
+        return ((preco - custo_unidade) / preco) * 100
+    return 0
+
+def calcular_custo_unidade(preco_compra, unidades_caixa):
+    if preco_compra and unidades_caixa and unidades_caixa > 0:
+        return preco_compra / unidades_caixa
     return 0
 
 @app.route("/")
@@ -171,11 +178,13 @@ def index():
     boxes = ""
     for p in q.order_by(Produto.nome).all():
         cls = "box destaque" if p.id in top_ids else "box"
-        margem = calcular_margem(p.preco, p.preco_compra or 0)
+        margem = calcular_margem(p.preco, p.preco_compra or 0, p.unidades_caixa or 1)
+        custo_un = calcular_custo_unidade(p.preco_compra or 0, p.unidades_caixa or 1)
         margem_cls = "margem" if margem >= 30 else "margem-baixa"
         boxes += '<div class="'+cls+'"><b>'+p.nome+'</b>'
         if p.categoria: boxes += '<div style="font-size:.7rem;color:#1976d2">'+p.categoria.nome+'</div>'
-        boxes += '<div>Venda: Kz '+str(int(p.preco))+'</div><div>Compra: Kz '+str(int(p.preco_compra or 0))+'</div>'
+        boxes += '<div>Venda: Kz '+str(int(p.preco))+'</div>'
+        boxes += '<div>Custo/un: Kz '+str(int(custo_un))+'</div>'
         boxes += '<div class="'+margem_cls+'">Margem: '+str(int(margem))+'%</div>'
         boxes += '<div>Stock: '+str(p.quantidade)+'</div>'
         boxes += '<form method="POST" action="/vender"><input type="hidden" name="produto_id" value="'+str(p.id)+'"><button class="g s">Vender</button></form>'
@@ -202,7 +211,8 @@ def vender():
     if not is_admin() and dia_fechado(uid): return redirect("/")
     p = Produto.query.get(int(request.form["produto_id"]))
     if p and p.quantidade >= 1:
-        lucro = p.preco - (p.preco_compra or 0)
+        custo_un = calcular_custo_unidade(p.preco_compra or 0, p.unidades_caixa or 1)
+        lucro = p.preco - custo_un
         db.session.add(Venda(produto_id=p.id, user_id=uid, quantidade=1, valor_total=p.preco, lucro=lucro))
         p.quantidade -= 1
         db.session.commit()
@@ -367,7 +377,7 @@ def caixa():
 def produtos():
     if not tem_perm("perm_produtos"): return redirect("/")
     if request.method == "POST" and is_admin():
-        db.session.add(Produto(nome=request.form["nome"], preco=float(request.form["preco"]), preco_compra=float(request.form.get("preco_compra",0)), quantidade=int(request.form["quantidade"]), stock_minimo=int(request.form.get("stock_minimo",5)), categoria_id=int(request.form["categoria"]) if request.form.get("categoria") else None))
+        db.session.add(Produto(nome=request.form["nome"], preco=float(request.form["preco"]), preco_compra=float(request.form.get("preco_compra",0)), unidades_caixa=int(request.form.get("unidades_caixa",1)), quantidade=int(request.form["quantidade"]), stock_minimo=int(request.form.get("stock_minimo",5)), categoria_id=int(request.form["categoria"]) if request.form.get("categoria") else None))
         db.session.commit()
         return redirect("/produtos")
     ps = Produto.query.order_by(Produto.nome).all()
@@ -375,11 +385,11 @@ def produtos():
     cat_opts = "".join('<option value="'+str(c.id)+'">'+c.nome+'</option>' for c in cats)
     linhas = ""
     for p in ps:
-        margem = calcular_margem(p.preco, p.preco_compra or 0)
+        margem = calcular_margem(p.preco, p.preco_compra or 0, p.unidades_caixa or 1)
         margem_cls = "margem" if margem >= 30 else "margem-baixa"
-        linhas += "<tr><td>"+p.nome+"</td><td>"+(p.categoria.nome if p.categoria else "-")+"</td><td>Kz "+str(int(p.preco))+"</td><td>Kz "+str(int(p.preco_compra or 0))+"</td><td class='"+margem_cls+"'>"+str(int(margem))+"%</td><td>"+str(p.quantidade)+"</td>"+("<td><a href='/editar/"+str(p.id)+"' class='btn btn-blue'>Editar</a></td>" if is_admin() else "")+"</tr>"
-    form = '<form method="POST"><input name="nome" placeholder="Nome" required><select name="categoria"><option value="">Categoria</option>'+cat_opts+'</select><input type="number" name="preco" placeholder="Preco venda" required><input type="number" name="preco_compra" placeholder="Preco compra"><input type="number" name="quantidade" placeholder="Qtd" required><input type="number" name="stock_minimo" placeholder="Stock minimo" value="5"><button>Cadastrar</button></form>' if is_admin() else ""
-    return render_template_string(T, content='<div class="card"><h2>Produtos</h2>'+form+'<table><tr><th>Nome</th><th>Categoria</th><th>Venda</th><th>Compra</th><th>Margem</th><th>Stock</th>'+("<th></th>" if is_admin() else "")+'</tr>'+linhas+'</table></div>')
+        linhas += "<tr><td>"+p.nome+"</td><td>"+(p.categoria.nome if p.categoria else "-")+"</td><td>Kz "+str(int(p.preco))+"</td><td>Kz "+str(int(p.preco_compra or 0))+"</td><td>"+str(p.unidades_caixa or 1)+"</td><td class='"+margem_cls+"'>"+str(int(margem))+"%</td><td>"+str(p.quantidade)+"</td>"+("<td><a href='/editar/"+str(p.id)+"' class='btn btn-blue'>Editar</a></td>" if is_admin() else "")+"</tr>"
+    form = '<form method="POST"><input name="nome" placeholder="Nome" required><select name="categoria"><option value="">Categoria</option>'+cat_opts+'</select><input type="number" name="preco" placeholder="Preco venda (unidade)" required><input type="number" name="preco_compra" placeholder="Preco compra (caixa)"><input type="number" name="unidades_caixa" placeholder="Unidades por caixa" value="1"><input type="number" name="quantidade" placeholder="Qtd stock" required><input type="number" name="stock_minimo" placeholder="Stock minimo" value="5"><button>Cadastrar</button></form>' if is_admin() else ""
+    return render_template_string(T, content='<div class="card"><h2>Produtos</h2>'+form+'<table><tr><th>Nome</th><th>Categoria</th><th>Venda</th><th>Compra</th><th>Un/Caixa</th><th>Margem</th><th>Stock</th>'+("<th></th>" if is_admin() else "")+'</tr>'+linhas+'</table></div>')
 
 @app.route("/editar/<int:id>", methods=["GET","POST"])
 def editar(id):
@@ -391,6 +401,7 @@ def editar(id):
         p.nome = request.form["nome"]
         p.preco = float(request.form["preco"])
         p.preco_compra = float(request.form.get("preco_compra",0))
+        p.unidades_caixa = int(request.form.get("unidades_caixa",1))
         p.quantidade = int(request.form["quantidade"])
         p.stock_minimo = int(request.form.get("stock_minimo",5))
         p.categoria_id = int(request.form["categoria"]) if request.form.get("categoria") else None
@@ -400,10 +411,11 @@ def editar(id):
         return redirect("/produtos")
     cats = Categoria.query.all()
     cat_opts = "".join('<option value="'+str(c.id)+'"'+(' selected' if p.categoria_id==c.id else '')+'>'+c.nome+'</option>' for c in cats)
-    margem = calcular_margem(p.preco, p.preco_compra or 0)
+    margem = calcular_margem(p.preco, p.preco_compra or 0, p.unidades_caixa or 1)
+    custo_un = calcular_custo_unidade(p.preco_compra or 0, p.unidades_caixa or 1)
     hist = HistoricoPreco.query.filter_by(produto_id=p.id).order_by(HistoricoPreco.data.desc()).limit(5).all()
     hist_linhas = "".join("<tr><td>"+h.data.strftime("%d/%m/%Y")+"</td><td>Kz "+str(int(h.preco_antigo))+"</td><td>Kz "+str(int(h.preco_novo))+"</td><td>Kz "+str(int(h.preco_compra_antigo or 0))+"</td><td>Kz "+str(int(h.preco_compra_novo or 0))+"</td></tr>" for h in hist)
-    return render_template_string(T, content='<div class="card"><h2>Editar</h2><p>Margem atual: <b>'+str(int(margem))+'%</b></p><form method="POST"><input name="nome" value="'+p.nome+'"><select name="categoria"><option value="">Categoria</option>'+cat_opts+'</select><input type="number" name="preco" value="'+str(p.preco)+'"><input type="number" name="preco_compra" value="'+str(p.preco_compra or 0)+'"><input type="number" name="quantidade" value="'+str(p.quantidade)+'"><input type="number" name="stock_minimo" value="'+str(p.stock_minimo or 5)+'"><button>Guardar</button></form></div><div class="card"><h2>Historico de Precos</h2><table><tr><th>Data</th><th>Venda Antiga</th><th>Venda Nova</th><th>Compra Antiga</th><th>Compra Nova</th></tr>'+hist_linhas+'</table></div>')
+    return render_template_string(T, content='<div class="card"><h2>Editar</h2><p>Custo por unidade: <b>Kz '+str(int(custo_un))+'</b></p><p>Margem atual: <b>'+str(int(margem))+'%</b></p><form method="POST"><input name="nome" value="'+p.nome+'"><select name="categoria"><option value="">Categoria</option>'+cat_opts+'</select><input type="number" name="preco" value="'+str(p.preco)+'" placeholder="Preco venda (unidade)"><input type="number" name="preco_compra" value="'+str(p.preco_compra or 0)+'" placeholder="Preco compra (caixa)"><input type="number" name="unidades_caixa" value="'+str(p.unidades_caixa or 1)+'" placeholder="Unidades por caixa"><input type="number" name="quantidade" value="'+str(p.quantidade)+'"><input type="number" name="stock_minimo" value="'+str(p.stock_minimo or 5)+'"><button>Guardar</button></form></div><div class="card"><h2>Historico de Precos</h2><table><tr><th>Data</th><th>Venda Antiga</th><th>Venda Nova</th><th>Compra Antiga</th><th>Compra Nova</th></tr>'+hist_linhas+'</table></div>')
 
 @app.route("/categorias", methods=["GET","POST"])
 def categorias():
@@ -636,6 +648,7 @@ if __name__ == "__main__":
         db.create_all()
         try:
             db.session.execute(db.text("ALTER TABLE produto ADD COLUMN IF NOT EXISTS preco_compra FLOAT DEFAULT 0"))
+            db.session.execute(db.text("ALTER TABLE produto ADD COLUMN IF NOT EXISTS unidades_caixa INTEGER DEFAULT 1"))
             db.session.execute(db.text("ALTER TABLE produto ADD COLUMN IF NOT EXISTS stock_minimo INTEGER DEFAULT 5"))
             db.session.execute(db.text("ALTER TABLE produto ADD COLUMN IF NOT EXISTS categoria_id INTEGER"))
             db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS tipo VARCHAR(20) DEFAULT 'funcionario'"))
