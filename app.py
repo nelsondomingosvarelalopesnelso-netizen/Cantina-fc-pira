@@ -136,8 +136,8 @@ td{padding:7px;border-bottom:1px solid #eee}
 .btn:hover{opacity:.9}
 .parabens{background:linear-gradient(135deg,#4caf50,#8bc34a);color:#fff;padding:20px;border-radius:10px;text-align:center;margin-bottom:12px;font-size:1.1rem}
 .parabens h3{margin-bottom:8px;font-size:1.3rem}
-.margem{color:#2e7d32;font-weight:600}
-.margem-baixa{color:#c62828;font-weight:600}
+.lucro{color:#2e7d32;font-weight:600}
+.lucro-baixo{color:#c62828;font-weight:600}
 </style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="/calculadora">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div><script>function toggleDark(){document.getElementById('body').classList.toggle('dark');localStorage.setItem('dark',document.getElementById('body').classList.contains('dark'))}if(localStorage.getItem('dark')==='true')document.getElementById('body').classList.add('dark')</script></body></html>"""
 
 def is_admin():
@@ -150,10 +150,10 @@ def tem_perm(perm):
 def dia_fechado(uid):
     return FechamentoDia.query.filter_by(user_id=uid, data=date.today()).first() is not None
 
-def calcular_margem(preco, preco_compra, unidades_caixa):
-    if preco_compra and preco_compra > 0 and preco > 0 and unidades_caixa and unidades_caixa > 0:
+def calcular_lucro_unidade(preco, preco_compra, unidades_caixa):
+    if preco_compra and unidades_caixa and unidades_caixa > 0:
         custo_unidade = preco_compra / unidades_caixa
-        return ((preco - custo_unidade) / preco) * 100
+        return preco - custo_unidade
     return 0
 
 def calcular_custo_unidade(preco_compra, unidades_caixa):
@@ -178,14 +178,14 @@ def index():
     boxes = ""
     for p in q.order_by(Produto.nome).all():
         cls = "box destaque" if p.id in top_ids else "box"
-        margem = calcular_margem(p.preco, p.preco_compra or 0, p.unidades_caixa or 1)
+        lucro_un = calcular_lucro_unidade(p.preco, p.preco_compra or 0, p.unidades_caixa or 1)
         custo_un = calcular_custo_unidade(p.preco_compra or 0, p.unidades_caixa or 1)
-        margem_cls = "margem" if margem >= 30 else "margem-baixa"
+        lucro_cls = "lucro" if lucro_un > 0 else "lucro-baixo"
         boxes += '<div class="'+cls+'"><b>'+p.nome+'</b>'
         if p.categoria: boxes += '<div style="font-size:.7rem;color:#1976d2">'+p.categoria.nome+'</div>'
         boxes += '<div>Venda: Kz '+str(int(p.preco))+'</div>'
         boxes += '<div>Custo/un: Kz '+str(int(custo_un))+'</div>'
-        boxes += '<div class="'+margem_cls+'">Margem: '+str(int(margem))+'%</div>'
+        boxes += '<div class="'+lucro_cls+'">Lucro: Kz '+str(int(lucro_un))+'</div>'
         boxes += '<div>Stock: '+str(p.quantidade)+'</div>'
         boxes += '<form method="POST" action="/vender"><input type="hidden" name="produto_id" value="'+str(p.id)+'"><button class="g s">Vender</button></form>'
         if is_admin():
@@ -385,11 +385,11 @@ def produtos():
     cat_opts = "".join('<option value="'+str(c.id)+'">'+c.nome+'</option>' for c in cats)
     linhas = ""
     for p in ps:
-        margem = calcular_margem(p.preco, p.preco_compra or 0, p.unidades_caixa or 1)
-        margem_cls = "margem" if margem >= 30 else "margem-baixa"
-        linhas += "<tr><td>"+p.nome+"</td><td>"+(p.categoria.nome if p.categoria else "-")+"</td><td>Kz "+str(int(p.preco))+"</td><td>Kz "+str(int(p.preco_compra or 0))+"</td><td>"+str(p.unidades_caixa or 1)+"</td><td class='"+margem_cls+"'>"+str(int(margem))+"%</td><td>"+str(p.quantidade)+"</td>"+("<td><a href='/editar/"+str(p.id)+"' class='btn btn-blue'>Editar</a></td>" if is_admin() else "")+"</tr>"
+        lucro_un = calcular_lucro_unidade(p.preco, p.preco_compra or 0, p.unidades_caixa or 1)
+        lucro_cls = "lucro" if lucro_un > 0 else "lucro-baixo"
+        linhas += "<tr><td>"+p.nome+"</td><td>"+(p.categoria.nome if p.categoria else "-")+"</td><td>Kz "+str(int(p.preco))+"</td><td>Kz "+str(int(p.preco_compra or 0))+"</td><td>"+str(p.unidades_caixa or 1)+"</td><td class='"+lucro_cls+"'>Kz "+str(int(lucro_un))+"</td><td>"+str(p.quantidade)+"</td>"+("<td><a href='/editar/"+str(p.id)+"' class='btn btn-blue'>Editar</a></td>" if is_admin() else "")+"</tr>"
     form = '<form method="POST"><input name="nome" placeholder="Nome" required><select name="categoria"><option value="">Categoria</option>'+cat_opts+'</select><input type="number" name="preco" placeholder="Preco venda (unidade)" required><input type="number" name="preco_compra" placeholder="Preco compra (caixa)"><input type="number" name="unidades_caixa" placeholder="Unidades por caixa" value="1"><input type="number" name="quantidade" placeholder="Qtd stock" required><input type="number" name="stock_minimo" placeholder="Stock minimo" value="5"><button>Cadastrar</button></form>' if is_admin() else ""
-    return render_template_string(T, content='<div class="card"><h2>Produtos</h2>'+form+'<table><tr><th>Nome</th><th>Categoria</th><th>Venda</th><th>Compra</th><th>Un/Caixa</th><th>Margem</th><th>Stock</th>'+("<th></th>" if is_admin() else "")+'</tr>'+linhas+'</table></div>')
+    return render_template_string(T, content='<div class="card"><h2>Produtos</h2>'+form+'<table><tr><th>Nome</th><th>Categoria</th><th>Venda</th><th>Compra</th><th>Un/Caixa</th><th>Lucro</th><th>Stock</th>'+("<th></th>" if is_admin() else "")+'</tr>'+linhas+'</table></div>')
 
 @app.route("/editar/<int:id>", methods=["GET","POST"])
 def editar(id):
@@ -411,11 +411,11 @@ def editar(id):
         return redirect("/produtos")
     cats = Categoria.query.all()
     cat_opts = "".join('<option value="'+str(c.id)+'"'+(' selected' if p.categoria_id==c.id else '')+'>'+c.nome+'</option>' for c in cats)
-    margem = calcular_margem(p.preco, p.preco_compra or 0, p.unidades_caixa or 1)
+    lucro_un = calcular_lucro_unidade(p.preco, p.preco_compra or 0, p.unidades_caixa or 1)
     custo_un = calcular_custo_unidade(p.preco_compra or 0, p.unidades_caixa or 1)
     hist = HistoricoPreco.query.filter_by(produto_id=p.id).order_by(HistoricoPreco.data.desc()).limit(5).all()
     hist_linhas = "".join("<tr><td>"+h.data.strftime("%d/%m/%Y")+"</td><td>Kz "+str(int(h.preco_antigo))+"</td><td>Kz "+str(int(h.preco_novo))+"</td><td>Kz "+str(int(h.preco_compra_antigo or 0))+"</td><td>Kz "+str(int(h.preco_compra_novo or 0))+"</td></tr>" for h in hist)
-    return render_template_string(T, content='<div class="card"><h2>Editar</h2><p>Custo por unidade: <b>Kz '+str(int(custo_un))+'</b></p><p>Margem atual: <b>'+str(int(margem))+'%</b></p><form method="POST"><input name="nome" value="'+p.nome+'"><select name="categoria"><option value="">Categoria</option>'+cat_opts+'</select><input type="number" name="preco" value="'+str(p.preco)+'" placeholder="Preco venda (unidade)"><input type="number" name="preco_compra" value="'+str(p.preco_compra or 0)+'" placeholder="Preco compra (caixa)"><input type="number" name="unidades_caixa" value="'+str(p.unidades_caixa or 1)+'" placeholder="Unidades por caixa"><input type="number" name="quantidade" value="'+str(p.quantidade)+'"><input type="number" name="stock_minimo" value="'+str(p.stock_minimo or 5)+'"><button>Guardar</button></form></div><div class="card"><h2>Historico de Precos</h2><table><tr><th>Data</th><th>Venda Antiga</th><th>Venda Nova</th><th>Compra Antiga</th><th>Compra Nova</th></tr>'+hist_linhas+'</table></div>')
+    return render_template_string(T, content='<div class="card"><h2>Editar</h2><p>Custo por unidade: <b>Kz '+str(int(custo_un))+'</b></p><p>Lucro por unidade: <b>Kz '+str(int(lucro_un))+'</b></p><form method="POST"><input name="nome" value="'+p.nome+'"><select name="categoria"><option value="">Categoria</option>'+cat_opts+'</select><input type="number" name="preco" value="'+str(p.preco)+'" placeholder="Preco venda (unidade)"><input type="number" name="preco_compra" value="'+str(p.preco_compra or 0)+'" placeholder="Preco compra (caixa)"><input type="number" name="unidades_caixa" value="'+str(p.unidades_caixa or 1)+'" placeholder="Unidades por caixa"><input type="number" name="quantidade" value="'+str(p.quantidade)+'"><input type="number" name="stock_minimo" value="'+str(p.stock_minimo or 5)+'"><button>Guardar</button></form></div><div class="card"><h2>Historico de Precos</h2><table><tr><th>Data</th><th>Venda Antiga</th><th>Venda Nova</th><th>Compra Antiga</th><th>Compra Nova</th></tr>'+hist_linhas+'</table></div>')
 
 @app.route("/categorias", methods=["GET","POST"])
 def categorias():
