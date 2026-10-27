@@ -474,7 +474,19 @@ def utilizadores():
     linhas = ""
     for u in users:
         linhas += '<tr><td>'+u.nome+'</td><td>'+u.email+'</td><td>'+(u.tipo or "funcionario")+'</td><td><a href="/permissoes/'+str(u.id)+'" class="btn btn-blue">Permissoes</a> <a href="/redefinir/'+str(u.id)+'" class="btn btn-orange">Senha</a> <a href="/dar-tudo/'+str(u.id)+'" class="btn btn-purple">Dar tudo</a></td></tr>'
-    return render_template_string(T, content='<div class="card"><h2>Utilizadores</h2><table><tr><th>Nome</th><th>Email</th><th>Tipo</th><th>Acoes</th></tr>'+linhas+'</table></div>')
+    return render_template_string(T, content='<div class="card"><h2>Utilizadores</h2><p><a href="/criar-utilizador" class="btn btn-green">Criar Utilizador</a></p><table><tr><th>Nome</th><th>Email</th><th>Tipo</th><th>Acoes</th></tr>'+linhas+'</table></div>')
+
+@app.route("/criar-utilizador", methods=["GET","POST"])
+def criar_utilizador():
+    if not is_admin(): return redirect("/")
+    if request.method == "POST":
+        if not Usuario.query.filter_by(email=request.form["email"]).first():
+            db.session.add(Usuario(nome=request.form["nome"], email=request.form["email"], senha=generate_password_hash(request.form["senha"]), tipo="funcionario"))
+            db.session.commit()
+            flash("Utilizador criado")
+            return redirect("/utilizadores")
+        flash("Email ja existe")
+    return render_template_string(T, content='<div class="card"><h2>Criar Utilizador</h2><form method="POST"><input name="nome" placeholder="Nome" required><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><button>Criar</button></form><p style="margin-top:10px"><a href="/utilizadores" class="btn btn-blue">Voltar</a></p></div>')
 
 @app.route("/dar-tudo/<int:id>")
 def dar_tudo(id):
@@ -552,19 +564,7 @@ def login():
             session["perm_hoje"] = u.perm_hoje or False
             return redirect("/dashboard")
         flash("Email ou senha incorretos")
-    return render_template_string(T, content='<div class="card" style="max-width:360px;margin:30px auto"><h2>Entrar</h2><form method="POST"><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><button>Entrar</button></form><p style="text-align:center;margin-top:10px"><a href="/registrar">Criar conta</a></p></div>')
-
-@app.route("/registrar", methods=["GET","POST"])
-def registrar():
-    if request.method == "POST":
-        if not Usuario.query.filter_by(email=request.form["email"]).first():
-            tipo = "admin" if Usuario.query.count() == 0 else "funcionario"
-            db.session.add(Usuario(nome=request.form["nome"], email=request.form["email"], senha=generate_password_hash(request.form["senha"]), tipo=tipo))
-            db.session.commit()
-            flash("Conta criada")
-            return redirect("/login")
-        flash("Email ja existe")
-    return render_template_string(T, content='<div class="card" style="max-width:360px;margin:30px auto"><h2>Criar Conta</h2><form method="POST"><input name="nome" placeholder="Nome" required><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><button>Registar</button></form></div>')
+    return render_template_string(T, content='<div class="card" style="max-width:360px;margin:30px auto"><h2>Entrar</h2><form method="POST"><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><button>Entrar</button></form></div>')
 
 @app.route("/logout")
 def logout():
