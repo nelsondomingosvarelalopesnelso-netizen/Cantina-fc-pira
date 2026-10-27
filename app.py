@@ -38,16 +38,6 @@ class Produto(db.Model):
     stock_minimo = db.Column(db.Integer, default=5)
     categoria_id = db.Column(db.Integer, db.ForeignKey("categoria.id"))
     categoria = db.relationship("Categoria")
-    
-    @property
-    def margem(self):
-        if self.preco_compra and self.preco_compra > 0:
-            return ((self.preco - self.preco_compra) / self.preco) * 100
-        return 0
-    
-    @property
-    def lucro_unitario(self):
-        return self.preco - (self.preco_compra or 0)
 
 class HistoricoPreco(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -295,7 +285,8 @@ def lucro():
         por_produto[v.produto.nome]["venda"] += v.valor_total
         por_produto[v.produto.nome]["lucro"] += v.lucro or 0
     linhas = "".join("<tr><td>"+n+"</td><td>"+str(d["qtd"])+"</td><td>Kz "+str(int(d["venda"]))+"</td><td>Kz "+str(int(d["lucro"]))+"</td></tr>" for n,d in por_produto.items())
-    return render_template_string(T, content='<div class="card"><h2>Lucro de Hoje</h2><p>Total vendas: <b>Kz '+str(int(total_venda))+'</b></p><p>Lucro: <b>Kz '+str(int(total_lucro))+'</b></p><p>Meta lucro: Kz '+str(META_LUCRO)+' ('+("Atingida" if total_lucro >= META_LUCRO else "Em progresso")+")</p><table><tr><th>Produto</th><th>Qtd</th><th>Venda</th><th>Lucro</th></tr>'+linhas+'</table></div>')
+    meta_status = "Atingida" if total_lucro >= META_LUCRO else "Em progresso"
+    return render_template_string(T, content='<div class="card"><h2>Lucro de Hoje</h2><p>Total vendas: <b>Kz '+str(int(total_venda))+'</b></p><p>Lucro: <b>Kz '+str(int(total_lucro))+'</b></p><p>Meta lucro: Kz '+str(META_LUCRO)+' ('+meta_status+')</p><table><tr><th>Produto</th><th>Qtd</th><th>Venda</th><th>Lucro</th></tr>'+linhas+'</table></div>')
 
 @app.route("/historico")
 def historico():
