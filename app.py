@@ -473,8 +473,23 @@ def utilizadores():
     users = Usuario.query.all()
     linhas = ""
     for u in users:
-        linhas += '<tr><td>'+u.nome+'</td><td>'+u.email+'</td><td>'+(u.tipo or "funcionario")+'</td><td><a href="/permissoes/'+str(u.id)+'" class="btn btn-blue">Permissoes</a> <a href="/redefinir/'+str(u.id)+'" class="btn btn-orange">Senha</a> <a href="/dar-tudo/'+str(u.id)+'" class="btn btn-purple">Dar tudo</a></td></tr>'
+        linhas += '<tr><td>'+u.nome+'</td><td>'+u.email+'</td><td>'+(u.tipo or "funcionario")+'</td><td><a href="/permissoes/'+str(u.id)+'" class="btn btn-blue">Permissoes</a> <a href="/redefinir/'+str(u.id)+'" class="btn btn-orange">Senha</a> <a href="/dar-tudo/'+str(u.id)+'" class="btn btn-purple">Dar tudo</a>'
+        if u.tipo != "admin":
+            linhas += ' <form method="POST" action="/eliminar-utilizador/'+str(u.id)+'" style="display:inline"><button class="btn btn-red" onclick="return confirm(\'Eliminar este utilizador?\')">Eliminar</button></form>'
+        linhas += '</td></tr>'
     return render_template_string(T, content='<div class="card"><h2>Utilizadores</h2><p><a href="/criar-utilizador" class="btn btn-green">Criar Utilizador</a></p><table><tr><th>Nome</th><th>Email</th><th>Tipo</th><th>Acoes</th></tr>'+linhas+'</table></div>')
+
+@app.route("/eliminar-utilizador/<int:id>", methods=["POST"])
+def eliminar_utilizador(id):
+    if not is_admin(): return redirect("/")
+    u = Usuario.query.get_or_404(id)
+    if u.tipo == "admin":
+        flash("Nao podes eliminar o administrador")
+        return redirect("/utilizadores")
+    db.session.delete(u)
+    db.session.commit()
+    flash("Utilizador eliminado")
+    return redirect("/utilizadores")
 
 @app.route("/criar-utilizador", methods=["GET","POST"])
 def criar_utilizador():
