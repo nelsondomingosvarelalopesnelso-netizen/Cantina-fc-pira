@@ -335,8 +335,29 @@ def calculadora():
 def relatorio():
     if not tem_perm("perm_relatorio"): return redirect("/")
     fs = FechamentoDia.query.order_by(FechamentoDia.data_fechamento.desc()).all()
-    linhas = "".join("<tr><td>"+f.data.strftime("%d/%m/%Y")+"</td><td>Kz "+str(int(f.total_liquido))+"</td><td>Kz "+str(int(f.total_lucro or 0))+"</td><td>Kz "+str(int(f.caixa))+"</td><td>"+str(f.qtd_vendas)+"</td><td>"+("Sim" if f.meta_atingida else "Nao")+"</td><td>"+("Sim" if f.meta_lucro_atingida else "Nao")+"</td></tr>" for f in fs)
-    return render_template_string(T, content='<div class="card"><h2>Relatorio</h2><table><tr><th>Data</th><th>Liquido</th><th>Lucro</th><th>Caixa</th><th>Vendas</th><th>Meta Venda</th><th>Meta Lucro</th></tr>'+linhas+'</table></div>')
+    linhas = "".join(
+        "<tr><td>"+f.data.strftime("%d/%m/%Y")+"</td>"
+        "<td>Kz "+str(int(f.total_bruto or 0))+"</td>"
+        "<td>Kz "+str(int(f.total_liquido or 0))+"</td>"
+        "<td>Kz "+str(int(f.total_lucro or 0))+"</td>"
+        "<td>Kz "+str(int(f.caixa or 0))+"</td>"
+        "<td>"+str(f.qtd_vendas or 0)+"</td>"
+        "<td>"+("Sim" if f.meta_atingida else "Nao")+"</td>"
+        "<td>"+("Sim" if f.meta_lucro_atingida else "Nao")+"</td></tr>"
+        for f in fs
+    )
+    return render_template_string(T, content='<div class="card"><h2>Relatorio</h2>'
+        '<table>'
+        '<tr>'
+        '<th>Data</th>'
+        '<th>Valor Bruto</th>'
+        '<th>Valor Liquido</th>'
+        '<th>Lucro</th>'
+        '<th>Caixa</th>'
+        '<th>Vendas</th>'
+        '<th>Meta Venda</th>'
+        '<th>Meta Lucro</th>'
+        '</tr>'+linhas+'</table></div>')
 
 @app.route("/mensal")
 def mensal():
@@ -363,9 +384,18 @@ def exportar_mensal():
     fs = FechamentoDia.query.filter(FechamentoDia.data >= inicio).order_by(FechamentoDia.data).all()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Data", "Liquido", "Lucro", "Caixa", "Vendas", "Meta Venda", "Meta Lucro"])
+    writer.writerow(["Data", "Valor Bruto", "Valor Liquido", "Lucro", "Caixa", "Vendas", "Meta Venda", "Meta Lucro"])
     for f in fs:
-        writer.writerow([f.data.strftime("%d/%m/%Y"), f.total_liquido, f.total_lucro or 0, f.caixa, f.qtd_vendas, "Sim" if f.meta_atingida else "Nao", "Sim" if f.meta_lucro_atingida else "Nao"])
+        writer.writerow([
+            f.data.strftime("%d/%m/%Y"),
+            f.total_bruto or 0,
+            f.total_liquido or 0,
+            f.total_lucro or 0,
+            f.caixa or 0,
+            f.qtd_vendas or 0,
+            "Sim" if f.meta_atingida else "Nao",
+            "Sim" if f.meta_lucro_atingida else "Nao"
+        ])
     return Response(output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=relatorio_mensal.csv"})
 
 @app.route("/caixa", methods=["GET","POST"])
@@ -511,7 +541,6 @@ def dashboard():
 @app.route("/reiniciar-dashboard", methods=["POST"])
 def reiniciar_dashboard():
     if not is_admin(): return redirect("/")
-    # Só apaga as vendas do dia. Compras e Restos ficam
     Venda.query.filter(db.func.date(Venda.data)==date.today()).delete()
     db.session.commit()
     flash("Dashboard reiniciado (vendas apagadas). Compras e Restos mantidos.")
