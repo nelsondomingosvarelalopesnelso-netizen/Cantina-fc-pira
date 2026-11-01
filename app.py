@@ -115,7 +115,7 @@ input,button,select{width:100%;padding:10px;margin:4px 0;border-radius:7px;borde
 button{background:#1565c0;color:#fff;border:none;font-weight:500;cursor:pointer}
 .g{background:#2e7d32}.o{background:#e65100}.r{background:#c62828}
 .s{width:auto;padding:6px 10px;font-size:12px;margin:2px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
 .box{background:#fff;border:1px solid #e3f2fd;border-radius:10px;padding:10px;text-align:center}
 .box.destaque{border:2px solid #ff9800;background:#fff8e1}
 .box b{display:block;color:#0d47a1;margin-bottom:3px}
@@ -138,6 +138,7 @@ td{padding:7px;border-bottom:1px solid #eee}
 .parabens h3{margin-bottom:8px;font-size:1.3rem}
 .lucro{color:#2e7d32;font-weight:600}
 .lucro-baixo{color:#c62828;font-weight:600}
+.qty{width:60px !important;padding:6px;text-align:center;display:inline-block;margin:0 2px}
 </style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="/calculadora">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div><script>function toggleDark(){document.getElementById('body').classList.toggle('dark');localStorage.setItem('dark',document.getElementById('body').classList.contains('dark'))}if(localStorage.getItem('dark')==='true')document.getElementById('body').classList.add('dark')</script></body></html>"""
 
 def is_admin():
@@ -187,7 +188,10 @@ def index():
         boxes += '<div>Custo/un: Kz '+str(int(custo_un))+'</div>'
         boxes += '<div class="'+lucro_cls+'">Lucro: Kz '+str(int(lucro_un))+'</div>'
         boxes += '<div>Stock: '+str(p.quantidade)+'</div>'
-        boxes += '<form method="POST" action="/vender"><input type="hidden" name="produto_id" value="'+str(p.id)+'"><button class="g s">Vender</button></form>'
+        boxes += '<form method="POST" action="/vender" style="margin-top:6px">'
+        boxes += '<input type="hidden" name="produto_id" value="'+str(p.id)+'">'
+        boxes += '<input type="number" name="quantidade" class="qty" value="1" min="1" max="'+str(p.quantidade)+'">'
+        boxes += '<button class="g s">Vender</button></form>'
         if is_admin():
             boxes += '<form method="POST" action="/devolver/'+str(p.id)+'"><button class="o s">Devolver</button></form>'
             boxes += '<form method="POST" action="/eliminar/'+str(p.id)+'"><button class="r s">Eliminar</button></form>'
@@ -210,12 +214,18 @@ def vender():
     uid = session["user_id"]
     if not is_admin() and dia_fechado(uid): return redirect("/")
     p = Produto.query.get(int(request.form["produto_id"]))
-    if p and p.quantidade >= 1:
+    qtd = int(request.form.get("quantidade", 1))
+    if p and qtd > 0 and p.quantidade >= qtd:
         custo_un = calcular_custo_unidade(p.preco_compra or 0, p.unidades_caixa or 1)
-        lucro = p.preco - custo_un
-        db.session.add(Venda(produto_id=p.id, user_id=uid, quantidade=1, valor_total=p.preco, lucro=lucro))
-        p.quantidade -= 1
+        lucro_un = p.preco - custo_un
+        lucro_total = lucro_un * qtd
+        valor_total = p.preco * qtd
+        db.session.add(Venda(produto_id=p.id, user_id=uid, quantidade=qtd, valor_total=valor_total, lucro=lucro_total))
+        p.quantidade -= qtd
         db.session.commit()
+        flash(f"Vendido {qtd}x {p.nome}")
+    else:
+        flash("Stock insuficiente")
     return redirect("/")
 
 @app.route("/devolver/<int:id>", methods=["POST"])
@@ -501,11 +511,10 @@ def dashboard():
 @app.route("/reiniciar-dashboard", methods=["POST"])
 def reiniciar_dashboard():
     if not is_admin(): return redirect("/")
+    # Só apaga as vendas do dia. Compras e Restos ficam
     Venda.query.filter(db.func.date(Venda.data)==date.today()).delete()
-    Compra.query.filter(db.func.date(Compra.data)==date.today()).delete()
-    Resto.query.filter(db.func.date(Resto.data)==date.today()).delete()
     db.session.commit()
-    flash("Dashboard reiniciado")
+    flash("Dashboard reiniciado (vendas apagadas). Compras e Restos mantidos.")
     return redirect("/dashboard")
 
 @app.route("/exportar")
