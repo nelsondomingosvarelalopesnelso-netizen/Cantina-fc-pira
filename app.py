@@ -155,6 +155,13 @@ td{padding:7px;border-bottom:1px solid #eee}
 .filtro{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .filtro a{padding:6px 12px;background:#e3f2fd;border-radius:16px;text-decoration:none;color:#0d47a1;font-size:.8rem}
 .filtro a.ativo{background:#1565c0;color:#fff}
+.calc{max-width:320px;margin:0 auto}
+.calc-display{background:#1e1e1e;color:#fff;font-size:1.8rem;text-align:right;padding:16px;border-radius:10px;margin-bottom:10px;min-height:60px}
+.calc-buttons{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.calc-buttons button{font-size:1.1rem;padding:14px;border-radius:8px;font-weight:500}
+.calc-buttons .op{background:#e65100}
+.calc-buttons .eq{background:#2e7d32}
+.calc-buttons .clear{background:#c62828}
 </style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="/calculadora">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div><script>function toggleDark(){document.getElementById('body').classList.toggle('dark');localStorage.setItem('dark',document.getElementById('body').classList.contains('dark'))}if(localStorage.getItem('dark')==='true')document.getElementById('body').classList.add('dark')</script></body></html>"""
 
 def is_admin():
@@ -341,6 +348,76 @@ def lucro():
     meta_status = "Atingida" if total_lucro >= META_LUCRO else "Em progresso"
     return render_template_string(T, content='<div class="card"><h2>Lucro de Hoje</h2><p>Total vendas: <b>Kz '+str(int(total_venda))+'</b></p><p>Lucro: <b>Kz '+str(int(total_lucro))+'</b></p><p>Meta lucro: Kz '+str(META_LUCRO)+' ('+meta_status+')</p><table><tr><th>Produto</th><th>Qtd</th><th>Venda</th><th>Lucro</th></tr>'+linhas+'</table></div>')
 
+@app.route("/calculadora")
+def calculadora():
+    if "user_id" not in session: return redirect("/login")
+    content = '''
+    <div class="card calc">
+        <h2>Calculadora</h2>
+        <div class="calc-display" id="display">0</div>
+        <div class="calc-buttons">
+            <button onclick="clearD()" class="clear">C</button>
+            <button onclick="back()">&lt;-</button>
+            <button onclick="add('/')" class="op">/</button>
+            <button onclick="add('*')" class="op">x</button>
+            <button onclick="add(7)">7</button>
+            <button onclick="add(8)">8</button>
+            <button onclick="add(9)">9</button>
+            <button onclick="add('-')" class="op">-</button>
+            <button onclick="add(4)">4</button>
+            <button onclick="add(5)">5</button>
+            <button onclick="add(6)">6</button>
+            <button onclick="add('+')" class="op">+</button>
+            <button onclick="add(1)">1</button>
+            <button onclick="add(2)">2</button>
+            <button onclick="add(3)">3</button>
+            <button onclick="calc()" class="eq">=</button>
+            <button onclick="add(0)" style="grid-column:span 2">0</button>
+            <button onclick="add('.')">.</button>
+        </div>
+    </div>
+    <script>
+    function add(v){var d=document.getElementById('display');if(d.innerText==='0'&&v!=='.')d.innerText=v;else d.innerText+=v}
+    function clearD(){document.getElementById('display').innerText='0'}
+    function back(){var d=document.getElementById('display');d.innerText=d.innerText.slice(0,-1)||'0'}
+    function calc(){try{document.getElementById('display').innerText=eval(document.getElementById('display').innerText)}catch(e){document.getElementById('display').innerText='Erro'}}
+    </script>
+    '''
+    return render_template_string(T, content=content)
+
+@app.route("/mensal")
+def mensal():
+    if not is_admin(): return redirect("/")
+    hoje = date.today()
+    inicio = hoje.replace(day=1)
+    fs = FechamentoDia.query.filter(FechamentoDia.data >= inicio).order_by(FechamentoDia.data).all()
+    total_mes = sum(f.total_liquido for f in fs)
+    total_lucro = sum(f.total_lucro or 0 for f in fs)
+    dias = []
+    for i in range(1, hoje.day+1):
+        d = date(hoje.year, hoje.month, i)
+        f = next((x for x in fs if x.data == d), None)
+        dias.append((d.strftime("%d"), int(f.total_liquido) if f else 0))
+    max_v = max([d[1] for d in dias] or [1]) or 1
+    barras = ""
+    for d in dias:
+        h = max(8, int(100 * d[1] / max_v))
+        barras += '<div class="bar"><div class="bar-fill" style="height:'+str(h)+'px"></div><div class="bar-label">'+d[0]+'</div></div>'
+    return render_template_string(T, content='<div class="card"><h2>Relatório Mensal</h2><p>Total líquido: <b>Kz '+str(int(total_mes))+'</b></p><p>Lucro: <b>Kz '+str(int(total_lucro))+'</b></p><p><a href="/exportar-mensal" class="btn btn-green">Exportar CSV do Mês</a></p><div class="bar-container">'+barras+'</div></div>')
+
+@app.route("/exportar-mensal")
+def exportar_mensal():
+    if not is_admin(): return redirect("/")
+    hoje = date.today()
+    inicio = hoje.replace(day=1)
+    fs = FechamentoDia.query.filter(FechamentoDia.data >= inicio).order_by(FechamentoDia.data).all()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Data", "Valor Bruto", "Valor Líquido", "Lucro", "Caixa", "Vendas", "Meta Venda", "Meta Lucro"])
+    for f in fs:
+        writer.writerow([f.data.strftime("%d/%m/%Y"), f.total_bruto or 0, f.total_liquido or 0, f.total_lucro or 0, f.caixa or 0, f.qtd_vendas or 0, "Sim" if f.meta_atingida else "Não", "Sim" if f.meta_lucro_atingida else "Não"])
+    return Response(output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=relatorio_mensal.csv"})
+
 @app.route("/valor-stock")
 def valor_stock():
     if not is_admin(): return redirect("/")
@@ -469,7 +546,6 @@ def dashboard():
     caixa = Caixa.query.filter_by(user_id=uid).first()
     cv = caixa.valor if caixa else 0
     
-    # Compras e Restos do dia (não são apagados no reiniciar)
     compras_hoje = Compra.query.filter(db.func.date(Compra.data)==hoje).all()
     restos_hoje = Resto.query.filter(db.func.date(Resto.data)==hoje).all()
     total_compras = sum(c.valor for c in compras_hoje)
@@ -505,7 +581,6 @@ def dashboard():
 @app.route("/reiniciar-dashboard", methods=["POST"])
 def reiniciar_dashboard():
     if not is_admin(): return redirect("/")
-    # Só apaga as vendas do dia. Compras e Restos ficam
     Venda.query.filter(db.func.date(Venda.data)==date.today()).delete()
     db.session.commit()
     flash("Dashboard reiniciado (apenas vendas apagadas). Compras e Restos mantidos.")
@@ -643,19 +718,6 @@ def exportar_csv():
     for v in vendas:
         writer.writerow([v.data.strftime("%d/%m/%Y"), v.data.strftime("%H:%M"), v.produto.nome, v.quantidade, v.valor_total, v.lucro or 0])
     return Response(output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=vendas.csv"})
-
-@app.route("/exportar-mensal")
-def exportar_mensal():
-    if not is_admin(): return redirect("/")
-    hoje = date.today()
-    inicio = hoje.replace(day=1)
-    fs = FechamentoDia.query.filter(FechamentoDia.data >= inicio).order_by(FechamentoDia.data).all()
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["Data", "Valor Bruto", "Valor Líquido", "Lucro", "Caixa", "Vendas", "Meta Venda", "Meta Lucro"])
-    for f in fs:
-        writer.writerow([f.data.strftime("%d/%m/%Y"), f.total_bruto or 0, f.total_liquido or 0, f.total_lucro or 0, f.caixa or 0, f.qtd_vendas or 0, "Sim" if f.meta_atingida else "Não", "Sim" if f.meta_lucro_atingida else "Não"])
-    return Response(output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=relatorio_mensal.csv"})
 
 @app.route("/utilizadores")
 def utilizadores():
