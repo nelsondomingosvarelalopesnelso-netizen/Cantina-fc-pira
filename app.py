@@ -106,6 +106,7 @@ body.dark th{background:#1a3a5c;color:#fff}
 body.dark input,body.dark select,body.dark textarea{background:#2a2a2a;color:#fff;border-color:#444}
 .top{background:#0d47a1;color:#fff;padding:12px 16px;position:sticky;top:0;z-index:50}
 .top h1{font-size:1.1rem}
+.top .user{font-size:.75rem;opacity:.85;margin-top:2px}
 .nav{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
 .nav a{background:rgba(255,255,255,.15);color:#fff;padding:5px 11px;border-radius:16px;text-decoration:none;font-size:.75rem}
 .c{max-width:920px;margin:0 auto;padding:12px}
@@ -155,14 +156,52 @@ td{padding:7px;border-bottom:1px solid #eee}
 .filtro{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .filtro a{padding:6px 12px;background:#e3f2fd;border-radius:16px;text-decoration:none;color:#0d47a1;font-size:.8rem}
 .filtro a.ativo{background:#1565c0;color:#fff}
-.calc{max-width:320px;margin:0 auto}
-.calc-display{background:#1e1e1e;color:#fff;font-size:1.8rem;text-align:right;padding:16px;border-radius:10px;margin-bottom:10px;min-height:60px}
-.calc-buttons{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.calc-buttons button{font-size:1.1rem;padding:14px;border-radius:8px;font-weight:500}
+.calc-float{position:fixed;top:80px;right:20px;width:280px;background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.2);z-index:1000;display:none;padding:12px}
+.calc-float.show{display:block}
+.calc-display{background:#1e1e1e;color:#fff;font-size:1.4rem;text-align:right;padding:12px;border-radius:8px;margin-bottom:8px;min-height:48px}
+.calc-buttons{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.calc-buttons button{font-size:.95rem;padding:10px;border-radius:6px;font-weight:500}
 .calc-buttons .op{background:#e65100}
 .calc-buttons .eq{background:#2e7d32}
 .calc-buttons .clear{background:#c62828}
-</style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="/calculadora">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div><script>function toggleDark(){document.getElementById('body').classList.toggle('dark');localStorage.setItem('dark',document.getElementById('body').classList.contains('dark'))}if(localStorage.getItem('dark')==='true')document.getElementById('body').classList.add('dark')</script></body></html>"""
+.calc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.calc-header span{font-weight:600;color:#0d47a1}
+.calc-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:#666;width:auto;padding:0}
+</style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="user">{{ session.get('nome','') }}</div><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="#" onclick="toggleCalc();return false;">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div>
+<div class="calc-float" id="calcFloat">
+  <div class="calc-header"><span>Calculadora</span><button class="calc-close" onclick="toggleCalc()">×</button></div>
+  <div class="calc-display" id="display">0</div>
+  <div class="calc-buttons">
+    <button onclick="clearD()" class="clear">C</button>
+    <button onclick="back()">&lt;-</button>
+    <button onclick="add('/')" class="op">/</button>
+    <button onclick="add('*')" class="op">×</button>
+    <button onclick="add(7)">7</button>
+    <button onclick="add(8)">8</button>
+    <button onclick="add(9)">9</button>
+    <button onclick="add('-')" class="op">-</button>
+    <button onclick="add(4)">4</button>
+    <button onclick="add(5)">5</button>
+    <button onclick="add(6)">6</button>
+    <button onclick="add('+')" class="op">+</button>
+    <button onclick="add(1)">1</button>
+    <button onclick="add(2)">2</button>
+    <button onclick="add(3)">3</button>
+    <button onclick="calc()" class="eq">=</button>
+    <button onclick="add(0)" style="grid-column:span 2">0</button>
+    <button onclick="add('.')">.</button>
+  </div>
+</div>
+<script>
+function toggleDark(){document.getElementById('body').classList.toggle('dark');localStorage.setItem('dark',document.getElementById('body').classList.contains('dark'))}
+if(localStorage.getItem('dark')==='true')document.getElementById('body').classList.add('dark')
+function toggleCalc(){document.getElementById('calcFloat').classList.toggle('show')}
+function add(v){var d=document.getElementById('display');if(d.innerText==='0'&&v!=='.')d.innerText=v;else d.innerText+=v}
+function clearD(){document.getElementById('display').innerText='0'}
+function back(){var d=document.getElementById('display');d.innerText=d.innerText.slice(0,-1)||'0'}
+function calc(){try{document.getElementById('display').innerText=eval(document.getElementById('display').innerText)}catch(e){document.getElementById('display').innerText='Erro'}}
+</script>
+</body></html>"""
 
 def is_admin():
     return session.get("tipo") == "admin"
@@ -347,43 +386,6 @@ def lucro():
     linhas = "".join("<tr><td>"+n+"</td><td>"+str(d["qtd"])+"</td><td>Kz "+str(int(d["venda"]))+"</td><td>Kz "+str(int(d["lucro"]))+"</td></tr>" for n,d in por_produto.items())
     meta_status = "Atingida" if total_lucro >= META_LUCRO else "Em progresso"
     return render_template_string(T, content='<div class="card"><h2>Lucro de Hoje</h2><p>Total vendas: <b>Kz '+str(int(total_venda))+'</b></p><p>Lucro: <b>Kz '+str(int(total_lucro))+'</b></p><p>Meta lucro: Kz '+str(META_LUCRO)+' ('+meta_status+')</p><table><tr><th>Produto</th><th>Qtd</th><th>Venda</th><th>Lucro</th></tr>'+linhas+'</table></div>')
-
-@app.route("/calculadora")
-def calculadora():
-    if "user_id" not in session: return redirect("/login")
-    content = '''
-    <div class="card calc">
-        <h2>Calculadora</h2>
-        <div class="calc-display" id="display">0</div>
-        <div class="calc-buttons">
-            <button onclick="clearD()" class="clear">C</button>
-            <button onclick="back()">&lt;-</button>
-            <button onclick="add('/')" class="op">/</button>
-            <button onclick="add('*')" class="op">x</button>
-            <button onclick="add(7)">7</button>
-            <button onclick="add(8)">8</button>
-            <button onclick="add(9)">9</button>
-            <button onclick="add('-')" class="op">-</button>
-            <button onclick="add(4)">4</button>
-            <button onclick="add(5)">5</button>
-            <button onclick="add(6)">6</button>
-            <button onclick="add('+')" class="op">+</button>
-            <button onclick="add(1)">1</button>
-            <button onclick="add(2)">2</button>
-            <button onclick="add(3)">3</button>
-            <button onclick="calc()" class="eq">=</button>
-            <button onclick="add(0)" style="grid-column:span 2">0</button>
-            <button onclick="add('.')">.</button>
-        </div>
-    </div>
-    <script>
-    function add(v){var d=document.getElementById('display');if(d.innerText==='0'&&v!=='.')d.innerText=v;else d.innerText+=v}
-    function clearD(){document.getElementById('display').innerText='0'}
-    function back(){var d=document.getElementById('display');d.innerText=d.innerText.slice(0,-1)||'0'}
-    function calc(){try{document.getElementById('display').innerText=eval(document.getElementById('display').innerText)}catch(e){document.getElementById('display').innerText='Erro'}}
-    </script>
-    '''
-    return render_template_string(T, content=content)
 
 @app.route("/mensal")
 def mensal():
