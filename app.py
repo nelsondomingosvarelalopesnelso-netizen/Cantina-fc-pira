@@ -4,6 +4,7 @@ from datetime import datetime, date, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 import csv
 import io
+import base64
 
 app = Flask(__name__)
 app.secret_key = "cantina-2026"
@@ -17,7 +18,7 @@ class Usuario(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     senha = db.Column(db.String(200), nullable=False)
     tipo = db.Column(db.String(20), default="funcionario")
-    foto = db.Column(db.String(500), default="")
+    foto = db.Column(db.Text, default="")
     perm_historico = db.Column(db.Boolean, default=False)
     perm_relatorio = db.Column(db.Boolean, default=False)
     perm_lucro = db.Column(db.Boolean, default=False)
@@ -115,9 +116,9 @@ body.dark .card,body.dark .box,body.dark .stat{background:#1e1e1e;color:#e0e0e0}
 body.dark .top{background:#0a1929}
 body.dark th{background:#1a3a5c;color:#fff}
 body.dark input,body.dark select,body.dark textarea{background:#2a2a2a;color:#fff;border-color:#444}
-.top{background:#0d47a1;color:#fff;padding:12px 16px;position:sticky;top:0;z-index:50}
+.top{background:#0d47a1;color:#fff;padding:12px 16px;position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:10px}
 .top h1{font-size:1.1rem}
-.top .user{font-size:.75rem;opacity:.85;margin-top:2px}
+.top .user{font-size:.75rem;opacity:.85}
 .nav{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
 .nav a{background:rgba(255,255,255,.15);color:#fff;padding:5px 11px;border-radius:16px;text-decoration:none;font-size:.75rem}
 .c{max-width:920px;margin:0 auto;padding:12px}
@@ -184,9 +185,9 @@ td{padding:7px;border-bottom:1px solid #eee}
 .bemvindo h3{margin-bottom:6px}
 .bemvindo ul{margin:8px 0 0 18px;font-size:.9rem}
 .bemvindo button{width:auto;margin-top:8px;background:#fff;color:#1565c0}
-.avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#1565c0;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:1.1rem}
+.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#1565c0;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600}
 .alerta-item{display:flex;gap:12px;align-items:flex-start;padding:12px;border-bottom:1px solid #eee}
-</style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="user">{{ session.get('nome','') }}</div><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a><a href="/alertas">Alertas</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="#" onclick="toggleCalc();return false;">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div>
+</style></head><body id="body">{% if session.get('user_id') %}<div class="top"><div>{{ session.get('foto_html','')|safe }}</div><div><h1>Cantina FC Pira</h1><div class="user">{{ session.get('nome','') }}</div></div></div><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a><a href="/alertas">Alertas</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="#" onclick="toggleCalc();return false;">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div>
 <div class="calc-float" id="calcFloat">
   <div class="calc-header"><span>Calculadora</span><button class="calc-close" onclick="toggleCalc()">×</button></div>
   <div class="calc-display" id="display">0</div>
@@ -243,6 +244,12 @@ def calcular_custo_unidade(preco_compra, unidades_caixa):
         return preco_compra / unidades_caixa
     return 0
 
+def foto_html(user):
+    if user and user.foto:
+        return f'<img src="data:image/jpeg;base64,{user.foto}" class="avatar" alt="">'
+    inicial = user.nome[0].upper() if user else "?"
+    return f'<div class="avatar">{inicial}</div>'
+
 def gerar_alertas(uid):
     if is_admin(): return ""
     user = Usuario.query.get(uid)
@@ -274,14 +281,12 @@ def gerar_alertas(uid):
         if not alertas:
             alertas.append("Tudo em ordem! Verifica o stock, regista as vendas e no fim do dia finaliza.")
 
-    # Guardar alertas no banco
     for msg in alertas:
         existe = Alerta.query.filter_by(user_id=uid, mensagem=msg, fechado=False).filter(db.func.date(Alerta.data)==hoje).first()
         if not existe:
             db.session.add(Alerta(user_id=uid, mensagem=msg, tipo=tipo))
     db.session.commit()
 
-    # Mostrar só os não fechados de hoje
     abertos = Alerta.query.filter_by(user_id=uid, fechado=False).filter(db.func.date(Alerta.data)==hoje).all()
     if not abertos: return ""
 
@@ -326,12 +331,7 @@ def alertas():
     
     linhas = ""
     for a in alertas_list:
-        foto = a.usuario.foto if a.usuario and a.usuario.foto else ""
-        if foto:
-            avatar = f'<img src="{foto}" class="avatar" alt="">'
-        else:
-            inicial = a.usuario.nome[0].upper() if a.usuario else "?"
-            avatar = f'<div class="avatar">{inicial}</div>'
+        avatar = foto_html(a.usuario)
         estado = "Lida" if a.fechado else "Não lida"
         estado_cor = "#2e7d32" if a.fechado else "#c62828"
         linhas += f'''
@@ -854,11 +854,26 @@ def utilizadores():
     users = Usuario.query.all()
     linhas = ""
     for u in users:
-        linhas += '<tr><td>'+u.nome+'</td><td>'+u.email+'</td><td>'+(u.tipo or "funcionario")+'</td><td><a href="/permissoes/'+str(u.id)+'" class="btn btn-blue">Permissões</a> <a href="/redefinir/'+str(u.id)+'" class="btn btn-orange">Senha</a> <a href="/dar-tudo/'+str(u.id)+'" class="btn btn-purple">Dar tudo</a>'
+        avatar = foto_html(u)
+        linhas += '<tr><td>'+avatar+'</td><td>'+u.nome+'</td><td>'+u.email+'</td><td>'+(u.tipo or "funcionario")+'</td><td><a href="/permissoes/'+str(u.id)+'" class="btn btn-blue">Permissões</a> <a href="/redefinir/'+str(u.id)+'" class="btn btn-orange">Senha</a> <a href="/alterar-foto/'+str(u.id)+'" class="btn btn-purple">Foto</a>'
         if u.tipo != "admin":
             linhas += ' <form method="POST" action="/eliminar-utilizador/'+str(u.id)+'" style="display:inline"><button class="btn btn-red" onclick="return confirm(\'Eliminar este utilizador?\')">Eliminar</button></form>'
         linhas += '</td></tr>'
-    return render_template_string(T, content='<div class="card"><h2>Utilizadores</h2><p><a href="/criar-utilizador" class="btn btn-green">Criar Utilizador</a></p><table><tr><th>Nome</th><th>Email</th><th>Tipo</th><th>Ações</th></tr>'+linhas+'</table></div>')
+    return render_template_string(T, content='<div class="card"><h2>Utilizadores</h2><p><a href="/criar-utilizador" class="btn btn-green">Criar Utilizador</a></p><table><tr><th>Foto</th><th>Nome</th><th>Email</th><th>Tipo</th><th>Ações</th></tr>'+linhas+'</table></div>')
+
+@app.route("/alterar-foto/<int:id>", methods=["GET","POST"])
+def alterar_foto(id):
+    if not is_admin(): return redirect("/")
+    u = Usuario.query.get_or_404(id)
+    if request.method == "POST":
+        ficheiro = request.files.get("foto")
+        if ficheiro and ficheiro.filename:
+            dados = ficheiro.read()
+            u.foto = base64.b64encode(dados).decode("utf-8")
+            db.session.commit()
+            flash("Foto atualizada para "+u.nome)
+            return redirect("/utilizadores")
+    return render_template_string(T, content='<div class="card"><h2>Alterar foto de '+u.nome+'</h2><form method="POST" enctype="multipart/form-data"><input type="file" name="foto" accept="image/*" required><button>Guardar Foto</button></form><p style="margin-top:10px"><a href="/utilizadores" class="btn btn-blue">Voltar</a></p></div>')
 
 @app.route("/eliminar-utilizador/<int:id>", methods=["POST"])
 def eliminar_utilizador(id):
@@ -877,13 +892,17 @@ def criar_utilizador():
     if not is_admin(): return redirect("/")
     if request.method == "POST":
         if not Usuario.query.filter_by(email=request.form["email"]).first():
-            foto = request.form.get("foto", "")
-            db.session.add(Usuario(nome=request.form["nome"], email=request.form["email"], senha=generate_password_hash(request.form["senha"]), tipo="funcionario", foto=foto))
+            foto_b64 = ""
+            ficheiro = request.files.get("foto")
+            if ficheiro and ficheiro.filename:
+                dados = ficheiro.read()
+                foto_b64 = base64.b64encode(dados).decode("utf-8")
+            db.session.add(Usuario(nome=request.form["nome"], email=request.form["email"], senha=generate_password_hash(request.form["senha"]), tipo="funcionario", foto=foto_b64))
             db.session.commit()
             flash("Utilizador criado")
             return redirect("/utilizadores")
         flash("Email já existe")
-    return render_template_string(T, content='<div class="card"><h2>Criar Utilizador</h2><form method="POST"><input name="nome" placeholder="Nome" required><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><input name="foto" placeholder="Link da foto (opcional)"><button>Criar</button></form><p style="margin-top:10px"><a href="/utilizadores" class="btn btn-blue">Voltar</a></p></div>')
+    return render_template_string(T, content='<div class="card"><h2>Criar Utilizador</h2><form method="POST" enctype="multipart/form-data"><input name="nome" placeholder="Nome" required><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><input type="file" name="foto" accept="image/*"><button>Criar</button></form><p style="margin-top:10px"><a href="/utilizadores" class="btn btn-blue">Voltar</a></p></div>')
 
 @app.route("/dar-tudo/<int:id>")
 def dar_tudo(id):
@@ -952,6 +971,7 @@ def login():
             session["user_id"] = u.id
             session["nome"] = u.nome
             session["tipo"] = u.tipo or "funcionario"
+            session["foto_html"] = foto_html(u)
             session["perm_historico"] = u.perm_historico or False
             session["perm_relatorio"] = u.perm_relatorio or False
             session["perm_lucro"] = u.perm_lucro or False
@@ -977,7 +997,7 @@ if __name__ == "__main__":
             db.session.execute(db.text("ALTER TABLE produto ADD COLUMN IF NOT EXISTS stock_minimo INTEGER DEFAULT 5"))
             db.session.execute(db.text("ALTER TABLE produto ADD COLUMN IF NOT EXISTS categoria_id INTEGER"))
             db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS tipo VARCHAR(20) DEFAULT 'funcionario'"))
-            db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS foto VARCHAR(500) DEFAULT ''"))
+            db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS foto TEXT DEFAULT ''"))
             db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_historico BOOLEAN DEFAULT FALSE"))
             db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_relatorio BOOLEAN DEFAULT FALSE"))
             db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_lucro BOOLEAN DEFAULT FALSE"))
