@@ -831,8 +831,22 @@ def compras():
         db.session.commit()
         return redirect("/compras")
     items = Compra.query.filter_by(user_id=uid).order_by(Compra.data.desc()).all()
-    linhas = "".join("<tr><td>"+c.descricao+"</td><td>Kz "+str(int(c.valor))+"</td><td>"+c.data.strftime("%d/%m/%Y")+"</td></tr>" for c in items)
-    return render_template_string(T, content='<div class="card"><h2>Compras</h2><form method="POST"><input name="descricao" placeholder="Descrição" required><input type="number" name="valor" placeholder="Valor" required><button>Registar</button></form><table><tr><th>Descrição</th><th>Valor</th><th>Data</th></tr>'+linhas+'</table></div>')
+    linhas = ""
+    for c in items:
+        linhas += "<tr><td>"+c.descricao+"</td><td>Kz "+str(int(c.valor))+"</td><td>"+c.data.strftime("%d/%m/%Y")+"</td><td><a href='/editar-compra/"+str(c.id)+"' class='btn btn-blue'>Editar</a></td></tr>"
+    return render_template_string(T, content='<div class="card"><h2>Compras</h2><form method="POST"><input name="descricao" placeholder="Descrição" required><input type="number" name="valor" placeholder="Valor" required><button>Registar</button></form><table><tr><th>Descrição</th><th>Valor</th><th>Data</th><th></th></tr>'+linhas+'</table></div>')
+
+@app.route("/editar-compra/<int:id>", methods=["GET","POST"])
+def editar_compra(id):
+    if not is_admin(): return redirect("/")
+    c = Compra.query.get_or_404(id)
+    if request.method == "POST":
+        c.descricao = request.form["descricao"]
+        c.valor = float(request.form["valor"])
+        db.session.commit()
+        flash("Compra atualizada")
+        return redirect("/compras")
+    return render_template_string(T, content='<div class="card"><h2>Editar Compra</h2><form method="POST"><input name="descricao" value="'+c.descricao+'" required><input type="number" name="valor" value="'+str(c.valor)+'" required><button>Guardar</button></form><p style="margin-top:10px"><a href="/compras" class="btn btn-blue">Voltar</a></p></div>')
 
 @app.route("/restos", methods=["GET","POST"])
 def restos():
@@ -843,8 +857,22 @@ def restos():
         db.session.commit()
         return redirect("/restos")
     items = Resto.query.filter_by(user_id=uid).order_by(Resto.data.desc()).all()
-    linhas = "".join("<tr><td>"+r.descricao+"</td><td>Kz "+str(int(r.valor))+"</td><td>"+r.data.strftime("%d/%m/%Y")+"</td></tr>" for r in items)
-    return render_template_string(T, content='<div class="card"><h2>Restos</h2><form method="POST"><input name="descricao" placeholder="Descrição" required><input type="number" name="valor" placeholder="Valor" required><button>Registar</button></form><table><tr><th>Descrição</th><th>Valor</th><th>Data</th></tr>'+linhas+'</table></div>')
+    linhas = ""
+    for r in items:
+        linhas += "<tr><td>"+r.descricao+"</td><td>Kz "+str(int(r.valor))+"</td><td>"+r.data.strftime("%d/%m/%Y")+"</td><td><a href='/editar-resto/"+str(r.id)+"' class='btn btn-blue'>Editar</a></td></tr>"
+    return render_template_string(T, content='<div class="card"><h2>Restos</h2><form method="POST"><input name="descricao" placeholder="Descrição" required><input type="number" name="valor" placeholder="Valor" required><button>Registar</button></form><table><tr><th>Descrição</th><th>Valor</th><th>Data</th><th></th></tr>'+linhas+'</table></div>')
+
+@app.route("/editar-resto/<int:id>", methods=["GET","POST"])
+def editar_resto(id):
+    if not is_admin(): return redirect("/")
+    r = Resto.query.get_or_404(id)
+    if request.method == "POST":
+        r.descricao = request.form["descricao"]
+        r.valor = float(request.form["valor"])
+        db.session.commit()
+        flash("Resto atualizado")
+        return redirect("/restos")
+    return render_template_string(T, content='<div class="card"><h2>Editar Resto</h2><form method="POST"><input name="descricao" value="'+r.descricao+'" required><input type="number" name="valor" value="'+str(r.valor)+'" required><button>Guardar</button></form><p style="margin-top:10px"><a href="/restos" class="btn btn-blue">Voltar</a></p></div>')
 
 @app.route("/exportar")
 def exportar():
