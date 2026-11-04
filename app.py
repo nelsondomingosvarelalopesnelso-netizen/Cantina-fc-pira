@@ -167,6 +167,12 @@ td{padding:7px;border-bottom:1px solid #eee}
 .calc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .calc-header span{font-weight:600;color:#0d47a1}
 .calc-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:#666;width:auto;padding:0}
+.bemvindo{background:linear-gradient(135deg,#1565c0,#42a5f5);color:#fff;padding:16px;border-radius:10px;margin-bottom:12px}
+.bemvindo.alerta-msg{background:linear-gradient(135deg,#e65100,#ff9800)}
+.bemvindo.sucesso{background:linear-gradient(135deg,#2e7d32,#66bb6a)}
+.bemvindo h3{margin-bottom:6px}
+.bemvindo ul{margin:8px 0 0 18px;font-size:.9rem}
+.bemvindo button{width:auto;margin-top:8px;background:#fff;color:#1565c0}
 </style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="user">{{ session.get('nome','') }}</div><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="#" onclick="toggleCalc();return false;">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div>
 <div class="calc-float" id="calcFloat">
   <div class="calc-header"><span>Calculadora</span><button class="calc-close" onclick="toggleCalc()">×</button></div>
@@ -200,6 +206,8 @@ function add(v){var d=document.getElementById('display');if(d.innerText==='0'&&v
 function clearD(){document.getElementById('display').innerText='0'}
 function back(){var d=document.getElementById('display');d.innerText=d.innerText.slice(0,-1)||'0'}
 function calc(){try{document.getElementById('display').innerText=eval(document.getElementById('display').innerText)}catch(e){document.getElementById('display').innerText='Erro'}}
+function fecharBemvindo(){document.getElementById('bemvindo').style.display='none';localStorage.setItem('bemvindo_fechado',new Date().toDateString())}
+if(localStorage.getItem('bemvindo_fechado')===new Date().toDateString()){var el=document.getElementById('bemvindo');if(el)el.style.display='none'}
 </script>
 </body></html>"""
 
@@ -222,6 +230,52 @@ def calcular_custo_unidade(preco_compra, unidades_caixa):
     if preco_compra and unidades_caixa and unidades_caixa > 0:
         return preco_compra / unidades_caixa
     return 0
+
+def mensagem_bemvindo():
+    if is_admin(): return ""
+    nome = session.get("nome", "Funcionário")
+    hoje = date.today()
+    uid = session.get("user_id")
+
+    # Verificar situação atual
+    vendas_hoje = Venda.query.filter(db.func.date(Venda.data)==hoje).count()
+    baixos = Produto.query.filter(Produto.quantidade <= Produto.stock_minimo).count()
+    fechado = dia_fechado(uid) if uid else False
+    hora = datetime.now().hour
+
+    classe = "bemvindo"
+    titulo = f"Olá {nome}!"
+    mensagens = []
+
+    if fechado:
+        titulo = f"Olá {nome}, dia já finalizado!"
+        mensagens.append("O dia de hoje já foi finalizado. Podes reiniciar se precisares de continuar a vender.")
+        classe = "bemvindo sucesso"
+    else:
+        if baixos > 0:
+            mensagens.append(f"Atenção: tens <b>{baixos} produto(s)</b> com stock baixo. Verifica o stock antes de vender.")
+            classe = "bemvindo alerta-msg"
+        
+        if vendas_hoje == 0:
+            mensagens.append("Ainda não há vendas registadas hoje. Começa a registar as vendas.")
+        elif vendas_hoje > 0:
+            mensagens.append(f"Já tens <b>{vendas_hoje}</b> venda(s) registada(s) hoje. Continua o bom trabalho!")
+
+        if hora >= 16 and not fechado:
+            mensagens.append("Lembra-te: no final do dia vai a <b>Hoje</b> e clica em <b>Finalizar Dia</b> para guardar o relatório.")
+
+        if not mensagens:
+            mensagens.append("Tudo em ordem! Verifica o stock, regista as vendas e no fim do dia finaliza.")
+
+    lista = "".join(f"<li>{m}</li>" for m in mensagens)
+
+    return f'''
+    <div class="{classe}" id="bemvindo">
+        <h3>{titulo}</h3>
+        <ul>{lista}</ul>
+        <button onclick="fecharBemvindo()">Entendi, obrigado!</button>
+    </div>
+    '''
 
 @app.route("/")
 def index():
@@ -267,7 +321,8 @@ def index():
         baixos = Produto.query.filter(Produto.quantidade <= Produto.stock_minimo).all()
         if baixos:
             alertas = '<div class="alerta">Stock baixo: '+", ".join(p.nome+" ("+str(p.quantidade)+")" for p in baixos)+'</div>'
-    return render_template_string(T, content=alertas+'<div class="card"><h2>Vender</h2><form method="GET"><input name="busca" placeholder="Pesquisar..." value="'+busca+'">'+sel+'<button>Pesquisar</button></form><div class="grid">'+boxes+'</div></div>')
+    bemvindo = mensagem_bemvindo()
+    return render_template_string(T, content=bemvindo+alertas+'<div class="card"><h2>Vender</h2><form method="GET"><input name="busca" placeholder="Pesquisar..." value="'+busca+'">'+sel+'<button>Pesquisar</button></form><div class="grid">'+boxes+'</div></div>')
 
 @app.route("/vender", methods=["POST"])
 def vender():
@@ -567,7 +622,9 @@ def dashboard():
     if is_admin():
         botao_reiniciar = '<form method="POST" action="/reiniciar-dashboard" style="margin-top:12px"><button class="r">Reiniciar Dashboard</button></form>'
     
-    return render_template_string(T, content=meta_msg+'''
+    bemvindo = mensagem_bemvindo()
+    
+    return render_template_string(T, content=bemvindo+meta_msg+'''
     <h2>Dashboard</h2>
     <div class="grid">
         <div class="stat venda">Vendas Hoje<b>Kz '''+str(int(bruto_hoje))+'''</b><div style="font-size:.75rem;color:#666">Ontem: Kz '''+str(int(bruto_ontem))+'''</div></div>
@@ -586,7 +643,7 @@ def reiniciar_dashboard():
     if not is_admin(): return redirect("/")
     Venda.query.filter(db.func.date(Venda.data)==date.today()).delete()
     db.session.commit()
-    flash("Dashboard reiniciado (apenas vendas apagadas). Compras e Restos mantidos.")
+    flash("Dashboard reiniciado. Apenas as vendas e o lucro de hoje foram apagados.")
     return redirect("/dashboard")
 
 @app.route("/caixa", methods=["GET","POST"])
