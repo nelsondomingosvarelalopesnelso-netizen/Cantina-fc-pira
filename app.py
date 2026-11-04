@@ -5,6 +5,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import csv
 import io
 import base64
+from PIL import Image
 
 app = Flask(__name__)
 app.secret_key = "cantina-2026"
@@ -249,6 +250,19 @@ def foto_html(user):
         return f'<img src="data:image/jpeg;base64,{user.foto}" class="avatar" alt="">'
     inicial = user.nome[0].upper() if user else "?"
     return f'<div class="avatar">{inicial}</div>'
+
+def processar_foto(ficheiro):
+    try:
+        img = Image.open(ficheiro.stream)
+        img.thumbnail((300, 300))
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG", quality=70)
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
+    except Exception as e:
+        print("Erro ao processar foto:", e)
+        return ""
 
 def gerar_alertas(uid):
     if is_admin(): return ""
@@ -868,10 +882,13 @@ def alterar_foto(id):
     if request.method == "POST":
         ficheiro = request.files.get("foto")
         if ficheiro and ficheiro.filename:
-            dados = ficheiro.read()
-            u.foto = base64.b64encode(dados).decode("utf-8")
-            db.session.commit()
-            flash("Foto atualizada para "+u.nome)
+            foto_b64 = processar_foto(ficheiro)
+            if foto_b64:
+                u.foto = foto_b64
+                db.session.commit()
+                flash("Foto atualizada para "+u.nome)
+            else:
+                flash("Não foi possível processar a foto. Tenta outra imagem.")
             return redirect("/utilizadores")
     return render_template_string(T, content='<div class="card"><h2>Alterar foto de '+u.nome+'</h2><form method="POST" enctype="multipart/form-data"><input type="file" name="foto" accept="image/*" required><button>Guardar Foto</button></form><p style="margin-top:10px"><a href="/utilizadores" class="btn btn-blue">Voltar</a></p></div>')
 
@@ -895,8 +912,7 @@ def criar_utilizador():
             foto_b64 = ""
             ficheiro = request.files.get("foto")
             if ficheiro and ficheiro.filename:
-                dados = ficheiro.read()
-                foto_b64 = base64.b64encode(dados).decode("utf-8")
+                foto_b64 = processar_foto(ficheiro)
             db.session.add(Usuario(nome=request.form["nome"], email=request.form["email"], senha=generate_password_hash(request.form["senha"]), tipo="funcionario", foto=foto_b64))
             db.session.commit()
             flash("Utilizador criado")
