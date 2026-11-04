@@ -1007,6 +1007,7 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
         try:
+            db.session.execute(db.text("ALTER TABLE usuario ALTER COLUMN foto TYPE TEXT"))
             db.session.execute(db.text("ALTER TABLE produto ADD COLUMN IF NOT EXISTS preco_compra FLOAT DEFAULT 0"))
             db.session.execute(db.text("ALTER TABLE produto ADD COLUMN IF NOT EXISTS unidades_caixa INTEGER DEFAULT 1"))
             db.session.execute(db.text("ALTER TABLE produto ADD COLUMN IF NOT EXISTS stock_minimo INTEGER DEFAULT 5"))
@@ -1028,6 +1029,7 @@ if __name__ == "__main__":
             db.session.execute(db.text("ALTER TABLE historico_preco ADD COLUMN IF NOT EXISTS preco_compra_antigo FLOAT"))
             db.session.execute(db.text("ALTER TABLE historico_preco ADD COLUMN IF NOT EXISTS preco_compra_novo FLOAT"))
             db.session.commit()
-        except:
+        except Exception as e:
+            print(e)
             db.session.rollback()
     app.run(host="0.0.0.0", port=5001, debug=True)
