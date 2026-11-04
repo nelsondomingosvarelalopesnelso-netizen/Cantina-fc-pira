@@ -116,9 +116,9 @@ body.dark .card,body.dark .box,body.dark .stat{background:#1e1e1e;color:#e0e0e0}
 body.dark .top{background:#0a1929}
 body.dark th{background:#1a3a5c;color:#fff}
 body.dark input,body.dark select,body.dark textarea{background:#2a2a2a;color:#fff;border-color:#444}
-.top{background:#0d47a1;color:#fff;padding:12px 16px;position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:10px}
+.top{background:#0d47a1;color:#fff;padding:12px 16px;position:sticky;top:0;z-index:50}
 .top h1{font-size:1.1rem}
-.top .user{font-size:.75rem;opacity:.85}
+.top .user{font-size:.75rem;opacity:.85;margin-top:2px}
 .nav{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
 .nav a{background:rgba(255,255,255,.15);color:#fff;padding:5px 11px;border-radius:16px;text-decoration:none;font-size:.75rem}
 .c{max-width:920px;margin:0 auto;padding:12px}
@@ -185,9 +185,9 @@ td{padding:7px;border-bottom:1px solid #eee}
 .bemvindo h3{margin-bottom:6px}
 .bemvindo ul{margin:8px 0 0 18px;font-size:.9rem}
 .bemvindo button{width:auto;margin-top:8px;background:#fff;color:#1565c0}
-.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#1565c0;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600}
+.avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#1565c0;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:600;font-size:.9rem}
 .alerta-item{display:flex;gap:12px;align-items:flex-start;padding:12px;border-bottom:1px solid #eee}
-</style></head><body id="body">{% if session.get('user_id') %}<div class="top"><div>{{ session.get('foto_html','')|safe }}</div><div><h1>Cantina FC Pira</h1><div class="user">{{ session.get('nome','') }}</div></div></div><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a><a href="/alertas">Alertas</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="#" onclick="toggleCalc();return false;">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div>
+</style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="user">{{ session.get('nome','') }}</div><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a><a href="/alertas">Alertas</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="#" onclick="toggleCalc();return false;">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div>
 <div class="calc-float" id="calcFloat">
   <div class="calc-header"><span>Calculadora</span><button class="calc-close" onclick="toggleCalc()">×</button></div>
   <div class="calc-display" id="display">0</div>
@@ -971,7 +971,6 @@ def login():
             session["user_id"] = u.id
             session["nome"] = u.nome
             session["tipo"] = u.tipo or "funcionario"
-            session["foto_html"] = foto_html(u)
             session["perm_historico"] = u.perm_historico or False
             session["perm_relatorio"] = u.perm_relatorio or False
             session["perm_lucro"] = u.perm_lucro or False
