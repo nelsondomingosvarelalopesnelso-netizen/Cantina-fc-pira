@@ -201,7 +201,9 @@ td{padding:7px;border-bottom:1px solid #eee}
 .msg{padding:10px;border-radius:8px;margin:6px 0;max-width:80%}
 .msg.mine{background:#e3f2fd;margin-left:auto}
 .msg.other{background:#f5f5f5}
-</style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="user">{{ session.get('nome','') }}</div><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a><a href="/alertas">Alertas</a><a href="/mensagens">Mensagens</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="#" onclick="toggleCalc();return false;">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div>
+.resumo-item{padding:10px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between}
+.resumo-item b{font-size:1.1rem}
+</style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="user">{{ session.get('nome','') }}</div><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a><a href="/resumo">Resumo do Dia</a><a href="/alertas">Alertas</a><a href="/mensagens">Mensagens</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="#" onclick="toggleCalc();return false;">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div>
 <div class="calc-float" id="calcFloat">
   <div class="calc-header"><span>Calculadora</span><button class="calc-close" onclick="toggleCalc()">×</button></div>
   <div class="calc-display" id="display">0</div>
@@ -276,6 +278,11 @@ def processar_foto(ficheiro):
     except Exception as e:
         print("Erro ao processar foto:", e)
         return ""
+
+def limpar_mensagens_antigas():
+    limite = datetime.utcnow() - timedelta(days=7)
+    Mensagem.query.filter(Mensagem.data < limite).delete()
+    db.session.commit()
 
 def gerar_alertas(uid):
     if is_admin(): return ""
@@ -364,9 +371,40 @@ def alertas():
         '''
     return render_template_string(T, content='<div class="card"><h2>Alertas</h2>'+linhas+'</div>')
 
+@app.route("/resumo")
+def resumo():
+    if "user_id" not in session: return redirect("/login")
+    hoje = date.today()
+    vendas = Venda.query.filter(db.func.date(Venda.data)==hoje).all()
+    bruto = sum(v.valor_total for v in vendas)
+    lucro = sum(v.lucro or 0 for v in vendas)
+    qtd_vendas = len(vendas)
+    
+    compras = Compra.query.filter(db.func.date(Compra.data)==hoje).all()
+    total_compras = sum(c.valor for c in compras)
+    
+    restos = Resto.query.filter(db.func.date(Resto.data)==hoje).all()
+    total_restos = sum(r.valor for r in restos)
+    
+    baixos = Produto.query.filter(Produto.quantidade <= Produto.stock_minimo).count()
+    
+    html = f'''
+    <div class="card">
+        <h2>Resumo do Dia</h2>
+        <div class="resumo-item"><span>Total Vendido</span><b>Kz {int(bruto)}</b></div>
+        <div class="resumo-item"><span>Lucro</span><b>Kz {int(lucro)}</b></div>
+        <div class="resumo-item"><span>Nº de Vendas</span><b>{qtd_vendas}</b></div>
+        <div class="resumo-item"><span>Compras</span><b>Kz {int(total_compras)}</b></div>
+        <div class="resumo-item"><span>Restos</span><b>Kz {int(total_restos)}</b></div>
+        <div class="resumo-item"><span>Produtos com Stock Baixo</span><b>{baixos}</b></div>
+    </div>
+    '''
+    return render_template_string(T, content=html)
+
 @app.route("/mensagens", methods=["GET","POST"])
 def mensagens():
     if "user_id" not in session: return redirect("/login")
+    limpar_mensagens_antigas()
     uid = session["user_id"]
     admin = Usuario.query.filter_by(tipo="admin").first()
     if not admin:
@@ -378,7 +416,13 @@ def mensagens():
         links = "".join(f'<p><a href="/mensagens?para={u.id}" class="btn btn-blue">{u.nome}</a></p>' for u in users)
         return render_template_string(T, content='<div class="card"><h2>Mensagens</h2><p>Escolhe o funcionário:</p>'+links+'</div>')
     
+    hoje = date.today()
+    enviadas_hoje = Mensagem.query.filter(Mensagem.de_user_id==uid, db.func.date(Mensagem.data)==hoje).count()
+    
     if request.method == "POST":
+        if enviadas_hoje >= 5:
+            flash("Limite de 5 mensagens por dia atingido.")
+            return redirect(request.url)
         texto = request.form.get("texto","").strip()
         if texto:
             para = admin.id if not is_admin() else outro_id
@@ -403,9 +447,15 @@ def mensagens():
         classe = "msg mine" if m.de_user_id == uid else "msg other"
         chat += f'<div class="{classe}"><div style="font-size:.75rem;color:#666">{m.de_user.nome} · {m.data.strftime("%d/%m %H:%M")}</div><div>{m.texto}</div></div>'
     
-    form = '<form method="POST"><textarea name="texto" placeholder="Escreve a mensagem..." required></textarea><button>Enviar</button></form>'
+    aviso = f'<p style="color:#c62828;font-size:.85rem">Já enviaste {enviadas_hoje}/5 mensagens hoje.</p>' if enviadas_hoje >= 3 else ""
+    form = ""
+    if enviadas_hoje < 5:
+        form = '<form method="POST"><textarea name="texto" placeholder="Escreve a mensagem..." required></textarea><button>Enviar</button></form>'
+    else:
+        form = '<p style="color:#c62828">Limite diário de mensagens atingido.</p>'
+    
     titulo = "Mensagens com " + (admin.nome if not is_admin() else Usuario.query.get(outro_id).nome)
-    return render_template_string(T, content=f'<div class="card"><h2>{titulo}</h2>{chat}{form}</div>')
+    return render_template_string(T, content=f'<div class="card"><h2>{titulo}</h2>{aviso}{chat}{form}</div>')
 
 @app.route("/")
 def index():
