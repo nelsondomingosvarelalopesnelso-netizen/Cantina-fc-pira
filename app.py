@@ -272,41 +272,35 @@ def gerar_alertas(uid):
     hoje = date.today()
     hora = datetime.now().hour
 
-    vendas_hoje = Venda.query.filter(db.func.date(Venda.data)==hoje).count()
     baixos = Produto.query.filter(Produto.quantidade <= Produto.stock_minimo).count()
     fechado = dia_fechado(uid)
 
     alertas = []
     tipo = "info"
 
-    if fechado:
-        alertas.append("O dia de hoje já foi finalizado. Podes reiniciar se precisares de continuar a vender.")
-        tipo = "sucesso"
-    else:
-        if baixos > 0:
-            alertas.append(f"Atenção: tens {baixos} produto(s) com stock baixo. Verifica e reabastece se for necessário.")
-            tipo = "alerta"
-        if vendas_hoje == 0 and hora >= 9:
-            alertas.append("Ainda não há vendas registadas hoje. Já começaste a vender?")
-        elif vendas_hoje > 0:
-            alertas.append(f"Já tens {vendas_hoje} venda(s) registada(s) hoje. Continua o bom trabalho!")
-        if hora >= 16 and not fechado:
-            alertas.append("Lembra-te: no final do dia vai a Hoje e clica em Finalizar Dia para guardar o relatório.")
-        if not alertas:
-            alertas.append("Tudo em ordem! Verifica o stock, regista as vendas e no fim do dia finaliza.")
+    # Só alertas realmente importantes
+    if baixos > 0:
+        alertas.append(f"Atenção: tens {baixos} produto(s) com stock baixo. Verifica e reabastece se for necessário.")
+        tipo = "alerta"
 
+    if hora >= 16 and not fechado:
+        alertas.append("Lembra-te: no final do dia vai a Hoje e clica em Finalizar Dia para guardar o relatório.")
+
+    if not alertas:
+        return ""
+
+    # Evitar criar o mesmo alerta várias vezes no mesmo dia
     for msg in alertas:
-        existe = Alerta.query.filter_by(user_id=uid, mensagem=msg, fechado=False).filter(db.func.date(Alerta.data)==hoje).first()
+        existe = Alerta.query.filter_by(user_id=uid, mensagem=msg).filter(db.func.date(Alerta.data)==hoje).first()
         if not existe:
             db.session.add(Alerta(user_id=uid, mensagem=msg, tipo=tipo))
     db.session.commit()
 
+    # Só mostrar se ainda não foi fechado hoje
     abertos = Alerta.query.filter_by(user_id=uid, fechado=False).filter(db.func.date(Alerta.data)==hoje).all()
     if not abertos: return ""
 
-    classe = "bemvindo"
-    if tipo == "alerta": classe = "bemvindo alerta-msg"
-    elif tipo == "sucesso": classe = "bemvindo sucesso"
+    classe = "bemvindo alerta-msg" if tipo == "alerta" else "bemvindo"
 
     lista = "".join(f"<li>{a.mensagem}</li>" for a in abertos)
     ids = ",".join(str(a.id) for a in abertos)
@@ -317,7 +311,7 @@ def gerar_alertas(uid):
         <ul>{lista}</ul>
         <form method="POST" action="/fechar-alertas" style="margin-top:8px">
             <input type="hidden" name="ids" value="{ids}">
-            <button type="submit">Entendi, obrigado!</button>
+            <button type="submit">Entendi</button>
         </form>
     </div>
     '''
