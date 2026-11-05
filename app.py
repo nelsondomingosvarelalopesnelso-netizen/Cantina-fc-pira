@@ -38,6 +38,16 @@ class Alerta(db.Model):
     data_fechado = db.Column(db.DateTime)
     usuario = db.relationship("Usuario")
 
+class Mensagem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    de_user_id = db.Column(db.Integer, db.ForeignKey("usuario.id"))
+    para_user_id = db.Column(db.Integer, db.ForeignKey("usuario.id"))
+    texto = db.Column(db.Text)
+    data = db.Column(db.DateTime, default=datetime.utcnow)
+    lida = db.Column(db.Boolean, default=False)
+    de_user = db.relationship("Usuario", foreign_keys=[de_user_id])
+    para_user = db.relationship("Usuario", foreign_keys=[para_user_id])
+
 class Categoria(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(80), nullable=False)
@@ -188,7 +198,10 @@ td{padding:7px;border-bottom:1px solid #eee}
 .bemvindo button{width:auto;margin-top:8px;background:#fff;color:#1565c0}
 .avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#1565c0;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:600;font-size:.9rem}
 .alerta-item{display:flex;gap:12px;align-items:flex-start;padding:12px;border-bottom:1px solid #eee}
-</style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="user">{{ session.get('nome','') }}</div><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a><a href="/alertas">Alertas</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="#" onclick="toggleCalc();return false;">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div>
+.msg{padding:10px;border-radius:8px;margin:6px 0;max-width:80%}
+.msg.mine{background:#e3f2fd;margin-left:auto}
+.msg.other{background:#f5f5f5}
+</style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="user">{{ session.get('nome','') }}</div><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a><a href="/alertas">Alertas</a><a href="/mensagens">Mensagens</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="#" onclick="toggleCalc();return false;">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div>
 <div class="calc-float" id="calcFloat">
   <div class="calc-header"><span>Calculadora</span><button class="calc-close" onclick="toggleCalc()">×</button></div>
   <div class="calc-display" id="display">0</div>
@@ -278,7 +291,6 @@ def gerar_alertas(uid):
     alertas = []
     tipo = "info"
 
-    # Só alertas realmente importantes
     if baixos > 0:
         alertas.append(f"Atenção: tens {baixos} produto(s) com stock baixo. Verifica e reabastece se for necessário.")
         tipo = "alerta"
@@ -289,14 +301,12 @@ def gerar_alertas(uid):
     if not alertas:
         return ""
 
-    # Evitar criar o mesmo alerta várias vezes no mesmo dia
     for msg in alertas:
         existe = Alerta.query.filter_by(user_id=uid, mensagem=msg).filter(db.func.date(Alerta.data)==hoje).first()
         if not existe:
             db.session.add(Alerta(user_id=uid, mensagem=msg, tipo=tipo))
     db.session.commit()
 
-    # Só mostrar se ainda não foi fechado hoje
     abertos = Alerta.query.filter_by(user_id=uid, fechado=False).filter(db.func.date(Alerta.data)==hoje).all()
     if not abertos: return ""
 
@@ -353,6 +363,49 @@ def alertas():
         </div>
         '''
     return render_template_string(T, content='<div class="card"><h2>Alertas</h2>'+linhas+'</div>')
+
+@app.route("/mensagens", methods=["GET","POST"])
+def mensagens():
+    if "user_id" not in session: return redirect("/login")
+    uid = session["user_id"]
+    admin = Usuario.query.filter_by(tipo="admin").first()
+    if not admin:
+        return render_template_string(T, content='<div class="card">Nenhum administrador encontrado.</div>')
+    
+    outro_id = admin.id if not is_admin() else request.args.get("para", type=int)
+    if is_admin() and not outro_id:
+        users = Usuario.query.filter(Usuario.tipo != "admin").all()
+        links = "".join(f'<p><a href="/mensagens?para={u.id}" class="btn btn-blue">{u.nome}</a></p>' for u in users)
+        return render_template_string(T, content='<div class="card"><h2>Mensagens</h2><p>Escolhe o funcionário:</p>'+links+'</div>')
+    
+    if request.method == "POST":
+        texto = request.form.get("texto","").strip()
+        if texto:
+            para = admin.id if not is_admin() else outro_id
+            db.session.add(Mensagem(de_user_id=uid, para_user_id=para, texto=texto))
+            db.session.commit()
+            flash("Mensagem enviada")
+        return redirect(request.url)
+    
+    if is_admin():
+        msgs = Mensagem.query.filter(
+            ((Mensagem.de_user_id==uid) & (Mensagem.para_user_id==outro_id)) |
+            ((Mensagem.de_user_id==outro_id) & (Mensagem.para_user_id==uid))
+        ).order_by(Mensagem.data).all()
+    else:
+        msgs = Mensagem.query.filter(
+            ((Mensagem.de_user_id==uid) & (Mensagem.para_user_id==admin.id)) |
+            ((Mensagem.de_user_id==admin.id) & (Mensagem.para_user_id==uid))
+        ).order_by(Mensagem.data).all()
+    
+    chat = ""
+    for m in msgs:
+        classe = "msg mine" if m.de_user_id == uid else "msg other"
+        chat += f'<div class="{classe}"><div style="font-size:.75rem;color:#666">{m.de_user.nome} · {m.data.strftime("%d/%m %H:%M")}</div><div>{m.texto}</div></div>'
+    
+    form = '<form method="POST"><textarea name="texto" placeholder="Escreve a mensagem..." required></textarea><button>Enviar</button></form>'
+    titulo = "Mensagens com " + (admin.nome if not is_admin() else Usuario.query.get(outro_id).nome)
+    return render_template_string(T, content=f'<div class="card"><h2>{titulo}</h2>{chat}{form}</div>')
 
 @app.route("/")
 def index():
@@ -649,7 +702,40 @@ def relatorio():
             linhas += "<td><form method='POST' action='/eliminar-relatorio/"+str(f.id)+"' style='display:inline'><button class='btn btn-red' onclick=\"return confirm('Eliminar este relatório?')\">Eliminar</button></form></td>"
         linhas += "</tr>"
     header_extra = "<th></th>" if is_admin() else ""
-    return render_template_string(T, content='<div class="card"><h2>Relatório</h2><table><tr><th>Data</th><th>Valor Bruto</th><th>Valor Líquido</th><th>Lucro</th><th>Caixa</th><th>Vendas</th><th>Meta Venda</th><th>Meta Lucro</th>'+header_extra+'</tr>'+linhas+'</table></div>')
+    adicionar = '<p><a href="/adicionar-relatorio" class="btn btn-green">Adicionar Relatório Manual</a></p>' if is_admin() else ""
+    return render_template_string(T, content='<div class="card"><h2>Relatório</h2>'+adicionar+'<table><tr><th>Data</th><th>Valor Bruto</th><th>Valor Líquido</th><th>Lucro</th><th>Caixa</th><th>Vendas</th><th>Meta Venda</th><th>Meta Lucro</th>'+header_extra+'</tr>'+linhas+'</table></div>')
+
+@app.route("/adicionar-relatorio", methods=["GET","POST"])
+def adicionar_relatorio():
+    if not is_admin(): return redirect("/")
+    if request.method == "POST":
+        data = datetime.strptime(request.form["data"], "%Y-%m-%d").date()
+        bruto = float(request.form["bruto"])
+        liquido = float(request.form["liquido"])
+        lucro = float(request.form["lucro"])
+        caixa_val = float(request.form["caixa"])
+        qtd = int(request.form["qtd"])
+        nota = request.form.get("nota","")
+        db.session.add(FechamentoDia(user_id=session["user_id"], data=data, total_bruto=bruto, total_liquido=liquido, total_lucro=lucro, caixa=caixa_val, qtd_vendas=qtd, nota=nota))
+        db.session.commit()
+        flash("Relatório adicionado manualmente")
+        return redirect("/relatorio")
+    return render_template_string(T, content='''
+    <div class="card">
+        <h2>Adicionar Relatório Manual</h2>
+        <form method="POST">
+            <input type="date" name="data" required>
+            <input type="number" step="0.01" name="bruto" placeholder="Valor Bruto" required>
+            <input type="number" step="0.01" name="liquido" placeholder="Valor Líquido" required>
+            <input type="number" step="0.01" name="lucro" placeholder="Lucro" required>
+            <input type="number" step="0.01" name="caixa" placeholder="Caixa" required>
+            <input type="number" name="qtd" placeholder="Nº de Vendas" required>
+            <textarea name="nota" placeholder="Nota (opcional)"></textarea>
+            <button>Adicionar</button>
+        </form>
+        <p style="margin-top:10px"><a href="/relatorio" class="btn btn-blue">Voltar</a></p>
+    </div>
+    ''')
 
 @app.route("/eliminar-relatorio/<int:id>", methods=["POST"])
 def eliminar_relatorio(id):
@@ -707,7 +793,7 @@ def dashboard():
         <div class="stat venda">Vendas Hoje<b>Kz '''+str(int(bruto_hoje))+'''</b><div style="font-size:.75rem;color:#666">Ontem: Kz '''+str(int(bruto_ontem))+'''</div></div>
         <div class="stat lucro">Lucro Hoje<b>Kz '''+str(int(lucro_hoje))+'''</b><div style="font-size:.75rem;color:#666">Ontem: Kz '''+str(int(lucro_ontem))+'''</div></div>
         <div class="stat caixa">Caixa<b>Kz '''+str(int(cv))+'''</b></div>
-        <div class="stat nvendas">Nº Vendas<b>'''+str(len(vendas_hoje))+'''</b></div>
+        <div class="stat nvendas">Nº Vendas<b>'''+str(len(vendas_hoje))+'''</b><div style="font-size:.75rem;color:#666">Ontem: '''+str(len(vendas_ontem))+'''</div></div>
         <div class="stat compras">Compras<b>Kz '''+str(int(total_compras))+'''</b></div>
         <div class="stat restos">Restos<b>Kz '''+str(int(total_restos))+'''</b></div>
         <div class="stat stock">Stock Baixo<b>'''+str(baixos)+'''</b></div>
