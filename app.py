@@ -27,6 +27,11 @@ class Usuario(db.Model):
     perm_stock = db.Column(db.Boolean, default=False)
     perm_caixa = db.Column(db.Boolean, default=False)
     perm_hoje = db.Column(db.Boolean, default=False)
+    perm_compras = db.Column(db.Boolean, default=False)
+    perm_restos = db.Column(db.Boolean, default=False)
+    perm_categorias = db.Column(db.Boolean, default=False)
+    perm_mensagens = db.Column(db.Boolean, default=True)
+    perm_resumo = db.Column(db.Boolean, default=True)
 
 class Alerta(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -203,7 +208,7 @@ td{padding:7px;border-bottom:1px solid #eee}
 .msg.other{background:#f5f5f5}
 .resumo-item{padding:10px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between}
 .resumo-item b{font-size:1.1rem}
-</style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="user">{{ session.get('nome','') }}</div><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a><a href="/resumo">Resumo do Dia</a><a href="/alertas">Alertas</a><a href="/mensagens">Mensagens</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% endif %}<a href="#" onclick="toggleCalc();return false;">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div>
+</style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="user">{{ session.get('nome','') }}</div><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a>{% if session.get('perm_resumo') or session.get('tipo')=='admin' %}<a href="/resumo">Resumo do Dia</a>{% endif %}{% if session.get('perm_mensagens') or session.get('tipo')=='admin' %}<a href="/mensagens">Mensagens</a>{% endif %}<a href="/alertas">Alertas</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% if session.get('perm_compras') %}<a href="/compras">Compras</a>{% endif %}{% if session.get('perm_restos') %}<a href="/restos">Restos</a>{% endif %}{% if session.get('perm_categorias') %}<a href="/categorias">Categorias</a>{% endif %}{% endif %}<a href="#" onclick="toggleCalc();return false;">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div>
 <div class="calc-float" id="calcFloat">
   <div class="calc-header"><span>Calculadora</span><button class="calc-close" onclick="toggleCalc()">×</button></div>
   <div class="calc-display" id="display">0</div>
@@ -374,6 +379,7 @@ def alertas():
 @app.route("/resumo")
 def resumo():
     if "user_id" not in session: return redirect("/login")
+    if not is_admin() and not session.get("perm_resumo"): return redirect("/")
     hoje = date.today()
     vendas = Venda.query.filter(db.func.date(Venda.data)==hoje).all()
     bruto = sum(v.valor_total for v in vendas)
@@ -404,6 +410,7 @@ def resumo():
 @app.route("/mensagens", methods=["GET","POST"])
 def mensagens():
     if "user_id" not in session: return redirect("/login")
+    if not is_admin() and not session.get("perm_mensagens"): return redirect("/")
     limpar_mensagens_antigas()
     uid = session["user_id"]
     admin = Usuario.query.filter_by(tipo="admin").first()
@@ -749,11 +756,52 @@ def relatorio():
     for f in fs:
         linhas += "<tr><td>"+f.data.strftime("%d/%m/%Y")+"</td><td>Kz "+str(int(f.total_bruto or 0))+"</td><td>Kz "+str(int(f.total_liquido or 0))+"</td><td>Kz "+str(int(f.total_lucro or 0))+"</td><td>Kz "+str(int(f.caixa or 0))+"</td><td>"+str(f.qtd_vendas or 0)+"</td><td>"+("Sim" if f.meta_atingida else "Não")+"</td><td>"+("Sim" if f.meta_lucro_atingida else "Não")+"</td>"
         if is_admin():
-            linhas += "<td><form method='POST' action='/eliminar-relatorio/"+str(f.id)+"' style='display:inline'><button class='btn btn-red' onclick=\"return confirm('Eliminar este relatório?')\">Eliminar</button></form></td>"
+            linhas += "<td><a href='/editar-relatorio/"+str(f.id)+"' class='btn btn-blue'>Editar</a> <form method='POST' action='/eliminar-relatorio/"+str(f.id)+"' style='display:inline'><button class='btn btn-red' onclick=\"return confirm('Eliminar este relatório?')\">Eliminar</button></form></td>"
         linhas += "</tr>"
     header_extra = "<th></th>" if is_admin() else ""
     adicionar = '<p><a href="/adicionar-relatorio" class="btn btn-green">Adicionar Relatório Manual</a></p>' if is_admin() else ""
-    return render_template_string(T, content='<div class="card"><h2>Relatório</h2>'+adicionar+'<table><tr><th>Data</th><th>Valor Bruto</th><th>Valor Líquido</th><th>Lucro</th><th>Caixa</th><th>Vendas</th><th>Meta Venda</th><th>Meta Lucro</th>'+header_extra+'</tr>'+linhas+'</table></div>')
+    reiniciar = '<form method="POST" action="/reiniciar-relatorio" style="margin-top:10px"><button class="r" onclick="return confirm(\'Tens a certeza que queres apagar TODOS os relatórios?\')">Reiniciar Relatório</button></form>' if is_admin() else ""
+    return render_template_string(T, content='<div class="card"><h2>Relatório</h2>'+adicionar+reiniciar+'<table><tr><th>Data</th><th>Valor Bruto</th><th>Valor Líquido</th><th>Lucro</th><th>Caixa</th><th>Vendas</th><th>Meta Venda</th><th>Meta Lucro</th>'+header_extra+'</tr>'+linhas+'</table></div>')
+
+@app.route("/editar-relatorio/<int:id>", methods=["GET","POST"])
+def editar_relatorio(id):
+    if not is_admin(): return redirect("/")
+    f = FechamentoDia.query.get_or_404(id)
+    if request.method == "POST":
+        f.data = datetime.strptime(request.form["data"], "%Y-%m-%d").date()
+        f.total_bruto = float(request.form["bruto"])
+        f.total_liquido = float(request.form["liquido"])
+        f.total_lucro = float(request.form["lucro"])
+        f.caixa = float(request.form["caixa"])
+        f.qtd_vendas = int(request.form["qtd"])
+        f.nota = request.form.get("nota","")
+        db.session.commit()
+        flash("Relatório atualizado")
+        return redirect("/relatorio")
+    return render_template_string(T, content=f'''
+    <div class="card">
+        <h2>Editar Relatório</h2>
+        <form method="POST">
+            <input type="date" name="data" value="{f.data.strftime('%Y-%m-%d')}" required>
+            <input type="number" step="0.01" name="bruto" value="{f.total_bruto or 0}" placeholder="Valor Bruto" required>
+            <input type="number" step="0.01" name="liquido" value="{f.total_liquido or 0}" placeholder="Valor Líquido" required>
+            <input type="number" step="0.01" name="lucro" value="{f.total_lucro or 0}" placeholder="Lucro" required>
+            <input type="number" step="0.01" name="caixa" value="{f.caixa or 0}" placeholder="Caixa" required>
+            <input type="number" name="qtd" value="{f.qtd_vendas or 0}" placeholder="Nº de Vendas" required>
+            <textarea name="nota" placeholder="Nota (opcional)">{f.nota or ''}</textarea>
+            <button>Guardar</button>
+        </form>
+        <p style="margin-top:10px"><a href="/relatorio" class="btn btn-blue">Voltar</a></p>
+    </div>
+    ''')
+
+@app.route("/reiniciar-relatorio", methods=["POST"])
+def reiniciar_relatorio():
+    if not is_admin(): return redirect("/")
+    FechamentoDia.query.delete()
+    db.session.commit()
+    flash("Todos os relatórios foram apagados.")
+    return redirect("/relatorio")
 
 @app.route("/adicionar-relatorio", methods=["GET","POST"])
 def adicionar_relatorio():
@@ -924,14 +972,15 @@ def editar(id):
 
 @app.route("/categorias", methods=["GET","POST"])
 def categorias():
-    if not is_admin(): return redirect("/")
-    if request.method == "POST":
+    if not tem_perm("perm_categorias"): return redirect("/")
+    if request.method == "POST" and is_admin():
         db.session.add(Categoria(nome=request.form["nome"]))
         db.session.commit()
         return redirect("/categorias")
     cats = Categoria.query.all()
     linhas = "".join("<tr><td>"+c.nome+"</td></tr>" for c in cats)
-    return render_template_string(T, content='<div class="card"><h2>Categorias</h2><form method="POST"><input name="nome" placeholder="Nome da categoria" required><button>Adicionar</button></form><table>'+linhas+'</table></div>')
+    form = '<form method="POST"><input name="nome" placeholder="Nome da categoria" required><button>Adicionar</button></form>' if is_admin() else ""
+    return render_template_string(T, content='<div class="card"><h2>Categorias</h2>'+form+'<table>'+linhas+'</table></div>')
 
 @app.route("/stock")
 def stock():
@@ -954,7 +1003,7 @@ def ajustar(id):
 
 @app.route("/compras", methods=["GET","POST"])
 def compras():
-    if not is_admin(): return redirect("/")
+    if not tem_perm("perm_compras"): return redirect("/")
     uid = session["user_id"]
     if request.method == "POST":
         db.session.add(Compra(user_id=uid, descricao=request.form["descricao"], valor=float(request.form["valor"])))
@@ -968,7 +1017,7 @@ def compras():
 
 @app.route("/editar-compra/<int:id>", methods=["GET","POST"])
 def editar_compra(id):
-    if not is_admin(): return redirect("/")
+    if not is_admin() and not session.get("perm_compras"): return redirect("/")
     c = Compra.query.get_or_404(id)
     if request.method == "POST":
         c.descricao = request.form["descricao"]
@@ -980,7 +1029,7 @@ def editar_compra(id):
 
 @app.route("/restos", methods=["GET","POST"])
 def restos():
-    if not is_admin(): return redirect("/")
+    if not tem_perm("perm_restos"): return redirect("/")
     uid = session["user_id"]
     if request.method == "POST":
         db.session.add(Resto(user_id=uid, descricao=request.form["descricao"], valor=float(request.form["valor"])))
@@ -994,7 +1043,7 @@ def restos():
 
 @app.route("/editar-resto/<int:id>", methods=["GET","POST"])
 def editar_resto(id):
-    if not is_admin(): return redirect("/")
+    if not is_admin() and not session.get("perm_restos"): return redirect("/")
     r = Resto.query.get_or_404(id)
     if request.method == "POST":
         r.descricao = request.form["descricao"]
@@ -1090,6 +1139,11 @@ def dar_tudo(id):
         u.perm_stock = True
         u.perm_caixa = True
         u.perm_hoje = True
+        u.perm_compras = True
+        u.perm_restos = True
+        u.perm_categorias = True
+        u.perm_mensagens = True
+        u.perm_resumo = True
         db.session.commit()
         flash("Todas as permissões dadas a "+u.nome)
     return redirect("/utilizadores")
@@ -1108,11 +1162,29 @@ def permissoes(id):
         u.perm_stock = "perm_stock" in request.form
         u.perm_caixa = "perm_caixa" in request.form
         u.perm_hoje = "perm_hoje" in request.form
+        u.perm_compras = "perm_compras" in request.form
+        u.perm_restos = "perm_restos" in request.form
+        u.perm_categorias = "perm_categorias" in request.form
+        u.perm_mensagens = "perm_mensagens" in request.form
+        u.perm_resumo = "perm_resumo" in request.form
         db.session.commit()
         flash("Permissões atualizadas para "+u.nome)
         return redirect("/utilizadores")
     checks = ""
-    for p, label in [("perm_hoje","Hoje (finalizar dia)"),("perm_historico","Histórico"),("perm_relatorio","Relatório"),("perm_lucro","Lucro"),("perm_produtos","Produtos"),("perm_stock","Stock"),("perm_caixa","Caixa")]:
+    for p, label in [
+        ("perm_hoje","Hoje (finalizar dia)"),
+        ("perm_historico","Histórico"),
+        ("perm_relatorio","Relatório"),
+        ("perm_lucro","Lucro"),
+        ("perm_produtos","Produtos"),
+        ("perm_stock","Stock"),
+        ("perm_caixa","Caixa"),
+        ("perm_compras","Compras"),
+        ("perm_restos","Restos"),
+        ("perm_categorias","Categorias"),
+        ("perm_mensagens","Mensagens"),
+        ("perm_resumo","Resumo do Dia")
+    ]:
         checked = " checked" if getattr(u, p) else ""
         checks += '<label style="display:block;margin:8px 0"><input type="checkbox" name="'+p+'"'+checked+'> '+label+'</label>'
     return render_template_string(T, content='<div class="card"><h2>Permissões de '+u.nome+'</h2><form method="POST">'+checks+'<button>Guardar</button></form><p style="margin-top:10px"><a href="/utilizadores" class="btn btn-blue">Voltar</a></p></div>')
@@ -1152,6 +1224,11 @@ def login():
             session["perm_stock"] = u.perm_stock or False
             session["perm_caixa"] = u.perm_caixa or False
             session["perm_hoje"] = u.perm_hoje or False
+            session["perm_compras"] = u.perm_compras or False
+            session["perm_restos"] = u.perm_restos or False
+            session["perm_categorias"] = u.perm_categorias or False
+            session["perm_mensagens"] = u.perm_mensagens or False
+            session["perm_resumo"] = u.perm_resumo or False
             return redirect("/dashboard")
         flash("Email ou senha incorretos")
     return render_template_string(T, content='<div class="card" style="max-width:360px;margin:30px auto"><h2>Entrar</h2><form method="POST"><input type="email" name="email" placeholder="Email" required><input type="password" name="senha" placeholder="Senha" required><button>Entrar</button></form></div>')
@@ -1179,6 +1256,11 @@ if __name__ == "__main__":
             db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_stock BOOLEAN DEFAULT FALSE"))
             db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_caixa BOOLEAN DEFAULT FALSE"))
             db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_hoje BOOLEAN DEFAULT FALSE"))
+            db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_compras BOOLEAN DEFAULT FALSE"))
+            db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_restos BOOLEAN DEFAULT FALSE"))
+            db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_categorias BOOLEAN DEFAULT FALSE"))
+            db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_mensagens BOOLEAN DEFAULT TRUE"))
+            db.session.execute(db.text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS perm_resumo BOOLEAN DEFAULT TRUE"))
             db.session.execute(db.text("ALTER TABLE venda ADD COLUMN IF NOT EXISTS lucro FLOAT DEFAULT 0"))
             db.session.execute(db.text("ALTER TABLE fechamento_dia ADD COLUMN IF NOT EXISTS total_lucro FLOAT DEFAULT 0"))
             db.session.execute(db.text("ALTER TABLE fechamento_dia ADD COLUMN IF NOT EXISTS meta_atingida BOOLEAN DEFAULT FALSE"))
