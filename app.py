@@ -104,7 +104,6 @@ class FechamentoDia(db.Model):
 
 class Caixa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("usuario.id"))
     valor = db.Column(db.Float, default=0)
 
 class Compra(db.Model):
@@ -124,7 +123,7 @@ class Resto(db.Model):
 META_VENDA = 48000
 META_LUCRO = 15000
 
-T = """<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cantina FC Pira</title><style>
+T = """<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cantina FC Pira</title><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
 body{background:#f4f6f8;color:#222}
 body.dark{background:#121212;color:#e0e0e0}
@@ -264,6 +263,14 @@ def calcular_custo_unidade(preco_compra, unidades_caixa):
     if preco_compra and unidades_caixa and unidades_caixa > 0:
         return preco_compra / unidades_caixa
     return 0
+
+def get_caixa():
+    c = Caixa.query.first()
+    if not c:
+        c = Caixa(valor=0)
+        db.session.add(c)
+        db.session.commit()
+    return c
 
 def foto_html(user):
     if user and user.foto:
@@ -577,10 +584,7 @@ def finalizar():
     vendas = Venda.query.filter(db.func.date(Venda.data)==date.today()).all()
     bruto = sum(v.valor_total for v in vendas)
     lucro = sum(v.lucro or 0 for v in vendas)
-    caixa = Caixa.query.filter_by(user_id=uid).first()
-    if not caixa:
-        caixa = Caixa(user_id=uid, valor=0)
-        db.session.add(caixa)
+    caixa = get_caixa()
     meta_atingida = bruto >= META_VENDA
     meta_lucro = lucro >= META_LUCRO
     if bruto > 5000:
@@ -859,8 +863,8 @@ def dashboard():
     bruto_ontem = sum(v.valor_total for v in vendas_ontem)
     lucro_ontem = sum(v.lucro or 0 for v in vendas_ontem)
     
-    caixa = Caixa.query.filter_by(user_id=uid).first()
-    cv = caixa.valor if caixa else 0
+    caixa = get_caixa()
+    cv = caixa.valor
     
     compras_hoje = Compra.query.filter(db.func.date(Compra.data)==hoje).all()
     restos_hoje = Resto.query.filter(db.func.date(Resto.data)==hoje).all()
@@ -885,6 +889,8 @@ def dashboard():
     
     bemvindo = gerar_alertas(uid)
     
+    chart_data = f"[{int(bruto_hoje)},{int(lucro_hoje)},{int(cv)}]"
+    
     return render_template_string(T, content=bemvindo+meta_msg+'''
     <h2>Dashboard</h2>
     <div class="grid">
@@ -897,6 +903,22 @@ def dashboard():
         <div class="stat stock">Stock Baixo<b>'''+str(baixos)+'''</b></div>
         <div class="stat valor-stock">Valor em Stock<b>Kz '''+str(int(valor_stock))+'''</b></div>
     </div>
+    <div class="card" style="margin-top:16px">
+        <canvas id="chart" height="120"></canvas>
+    </div>
+    <script>
+    new Chart(document.getElementById('chart'), {
+        type: 'bar',
+        data: {
+            labels: ['Vendas', 'Lucro', 'Caixa'],
+            datasets: [{
+                data: '''+chart_data+''',
+                backgroundColor: ['#1565c0', '#2e7d32', '#f57c00']
+            }]
+        },
+        options: {plugins: {legend: {display: false}}}
+    });
+    </script>
     '''+botao_reiniciar)
 
 @app.route("/reiniciar-dashboard", methods=["POST"])
@@ -910,17 +932,13 @@ def reiniciar_dashboard():
 @app.route("/caixa", methods=["GET","POST"])
 def caixa():
     if not tem_perm("perm_caixa"): return redirect("/")
-    uid = session["user_id"]
-    c = Caixa.query.filter_by(user_id=uid).first()
-    if not c:
-        c = Caixa(user_id=uid, valor=0)
-        db.session.add(c)
-        db.session.commit()
-    if request.method == "POST":
+    c = get_caixa()
+    if request.method == "POST" and is_admin():
         c.valor = float(request.form["valor"])
         db.session.commit()
         return redirect("/caixa")
-    return render_template_string(T, content='<div class="card"><h2>Caixa</h2><p style="font-size:1.3rem;font-weight:600">Kz '+str(int(c.valor))+'</p><form method="POST"><input type="number" name="valor" value="'+str(c.valor)+'"><button>Alterar</button></form></div>')
+    form = f'<form method="POST"><input type="number" name="valor" value="{c.valor}"><button>Alterar</button></form>' if is_admin() else ""
+    return render_template_string(T, content=f'<div class="card"><h2>Caixa</h2><p style="font-size:1.3rem;font-weight:600">Kz {int(c.valor)}</p>{form}</div>')
 
 @app.route("/produtos", methods=["GET","POST"])
 def produtos():
