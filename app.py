@@ -381,7 +381,22 @@ def alertas():
             </div>
         </div>
         '''
-    return render_template_string(T, content='<div class="card"><h2>Alertas</h2>'+linhas+'</div>')
+    reiniciar = ""
+    if is_admin():
+        reiniciar = '''
+        <form method="POST" action="/reiniciar-alertas" style="margin-bottom:12px">
+            <button class="r" onclick="return confirm('Apagar todos os alertas?')">Reiniciar Alertas</button>
+        </form>
+        '''
+    return render_template_string(T, content='<div class="card"><h2>Alertas</h2>'+reiniciar+linhas+'</div>')
+
+@app.route("/reiniciar-alertas", methods=["POST"])
+def reiniciar_alertas():
+    if not is_admin(): return redirect("/")
+    Alerta.query.delete()
+    db.session.commit()
+    flash("Todos os alertas foram apagados.")
+    return redirect("/alertas")
 
 @app.route("/resumo")
 def resumo():
@@ -613,7 +628,22 @@ def historico():
         query = query.join(Produto).filter(Produto.nome.ilike("%"+produto_filtro+"%"))
     vendas = query.order_by(Venda.data.desc()).limit(200).all()
     linhas = "".join("<tr><td>"+v.data.strftime("%d/%m/%Y")+"</td><td>"+v.data.strftime("%H:%M")+"</td><td>"+v.produto.nome+"</td><td>"+str(v.quantidade)+"</td><td>Kz "+str(int(v.valor_total))+"</td></tr>" for v in vendas)
-    return render_template_string(T, content='<div class="card"><h2>Histórico</h2><form method="GET"><input type="date" name="data" value="'+data_filtro+'"><input name="produto" placeholder="Produto" value="'+produto_filtro+'"><button>Pesquisar</button></form><table><tr><th>Data</th><th>Hora</th><th>Produto</th><th>Qtd</th><th>Valor</th></tr>'+linhas+'</table></div>')
+    reiniciar = ""
+    if is_admin():
+        reiniciar = '''
+        <form method="POST" action="/reiniciar-historico" style="margin-bottom:12px">
+            <button class="r" onclick="return confirm('Apagar TODO o histórico de vendas? Esta ação não pode ser desfeita.')">Reiniciar Histórico</button>
+        </form>
+        '''
+    return render_template_string(T, content='<div class="card"><h2>Histórico</h2>'+reiniciar+'<form method="GET"><input type="date" name="data" value="'+data_filtro+'"><input name="produto" placeholder="Produto" value="'+produto_filtro+'"><button>Pesquisar</button></form><table><tr><th>Data</th><th>Hora</th><th>Produto</th><th>Qtd</th><th>Valor</th></tr>'+linhas+'</table></div>')
+
+@app.route("/reiniciar-historico", methods=["POST"])
+def reiniciar_historico():
+    if not is_admin(): return redirect("/")
+    Venda.query.delete()
+    db.session.commit()
+    flash("Histórico de vendas apagado.")
+    return redirect("/historico")
 
 @app.route("/lucro")
 def lucro():
@@ -866,10 +896,9 @@ def dashboard():
     caixa = get_caixa()
     cv = caixa.valor
     
-    compras_hoje = Compra.query.filter(db.func.date(Compra.data)==hoje).all()
-    restos_hoje = Resto.query.filter(db.func.date(Resto.data)==hoje).all()
-    total_compras = sum(c.valor for c in compras_hoje)
-    total_restos = sum(r.valor for r in restos_hoje)
+    # TOTAL real de todas as Compras e Restos (não só de hoje)
+    total_compras = sum(c.valor for c in Compra.query.all())
+    total_restos = sum(r.valor for r in Resto.query.all())
     
     baixos = Produto.query.filter(Produto.quantidade <= Produto.stock_minimo).count()
     valor_stock = 0
@@ -885,7 +914,7 @@ def dashboard():
     
     botao_reiniciar = ""
     if is_admin():
-        botao_reiniciar = '<form method="POST" action="/reiniciar-dashboard" style="margin-top:12px"><button class="r">Reiniciar Dashboard</button></form>'
+        botao_reiniciar = '<form method="POST" action="/reiniciar-dashboard" style="margin-top:12px"><button class="r">Reiniciar Dashboard (só vendas de hoje)</button></form>'
     
     bemvindo = gerar_alertas(uid)
     
@@ -898,8 +927,8 @@ def dashboard():
         <div class="stat lucro">Lucro Hoje<b>Kz '''+str(int(lucro_hoje))+'''</b><div style="font-size:.75rem;color:#666">Ontem: Kz '''+str(int(lucro_ontem))+'''</div></div>
         <div class="stat caixa">Caixa<b>Kz '''+str(int(cv))+'''</b></div>
         <div class="stat nvendas">Nº Vendas<b>'''+str(len(vendas_hoje))+'''</b><div style="font-size:.75rem;color:#666">Ontem: '''+str(len(vendas_ontem))+'''</div></div>
-        <div class="stat compras">Compras<b>Kz '''+str(int(total_compras))+'''</b></div>
-        <div class="stat restos">Restos<b>Kz '''+str(int(total_restos))+'''</b></div>
+        <div class="stat compras">Total Compras<b>Kz '''+str(int(total_compras))+'''</b></div>
+        <div class="stat restos">Total Restos<b>Kz '''+str(int(total_restos))+'''</b></div>
         <div class="stat stock">Stock Baixo<b>'''+str(baixos)+'''</b></div>
         <div class="stat valor-stock">Valor em Stock<b>Kz '''+str(int(valor_stock))+'''</b></div>
     </div>
@@ -1027,11 +1056,43 @@ def compras():
         db.session.add(Compra(user_id=uid, descricao=request.form["descricao"], valor=float(request.form["valor"])))
         db.session.commit()
         return redirect("/compras")
-    items = Compra.query.filter_by(user_id=uid).order_by(Compra.data.desc()).all()
+    items = Compra.query.order_by(Compra.data.desc()).all()
     linhas = ""
     for c in items:
         linhas += "<tr><td>"+c.descricao+"</td><td>Kz "+str(int(c.valor))+"</td><td>"+c.data.strftime("%d/%m/%Y")+"</td><td><a href='/editar-compra/"+str(c.id)+"' class='btn btn-blue'>Editar</a></td></tr>"
-    return render_template_string(T, content='<div class="card"><h2>Compras</h2><form method="POST"><input name="descricao" placeholder="Descrição" required><input type="number" name="valor" placeholder="Valor" required><button>Registar</button></form><table><tr><th>Descrição</th><th>Valor</th><th>Data</th><th></th></tr>'+linhas+'</table></div>')
+    
+    total = sum(c.valor for c in items)
+    reiniciar = ""
+    if is_admin():
+        reiniciar = '''
+        <form method="POST" action="/reiniciar-compras" style="margin-bottom:12px">
+            <button class="r" onclick="return confirm('Apagar TODAS as compras?')">Reiniciar Compras</button>
+        </form>
+        '''
+    return render_template_string(T, content=f'''
+    <div class="card">
+        <h2>Compras</h2>
+        <p style="font-size:1.1rem;margin-bottom:10px">Total de Compras: <b>Kz {int(total)}</b></p>
+        {reiniciar}
+        <form method="POST">
+            <input name="descricao" placeholder="Descrição" required>
+            <input type="number" name="valor" placeholder="Valor" required>
+            <button>Registar</button>
+        </form>
+        <table>
+            <tr><th>Descrição</th><th>Valor</th><th>Data</th><th></th></tr>
+            {linhas}
+        </table>
+    </div>
+    ''')
+
+@app.route("/reiniciar-compras", methods=["POST"])
+def reiniciar_compras():
+    if not is_admin(): return redirect("/")
+    Compra.query.delete()
+    db.session.commit()
+    flash("Todas as compras foram apagadas.")
+    return redirect("/compras")
 
 @app.route("/editar-compra/<int:id>", methods=["GET","POST"])
 def editar_compra(id):
@@ -1053,11 +1114,43 @@ def restos():
         db.session.add(Resto(user_id=uid, descricao=request.form["descricao"], valor=float(request.form["valor"])))
         db.session.commit()
         return redirect("/restos")
-    items = Resto.query.filter_by(user_id=uid).order_by(Resto.data.desc()).all()
+    items = Resto.query.order_by(Resto.data.desc()).all()
     linhas = ""
     for r in items:
         linhas += "<tr><td>"+r.descricao+"</td><td>Kz "+str(int(r.valor))+"</td><td>"+r.data.strftime("%d/%m/%Y")+"</td><td><a href='/editar-resto/"+str(r.id)+"' class='btn btn-blue'>Editar</a></td></tr>"
-    return render_template_string(T, content='<div class="card"><h2>Restos</h2><form method="POST"><input name="descricao" placeholder="Descrição" required><input type="number" name="valor" placeholder="Valor" required><button>Registar</button></form><table><tr><th>Descrição</th><th>Valor</th><th>Data</th><th></th></tr>'+linhas+'</table></div>')
+    
+    total = sum(r.valor for r in items)
+    reiniciar = ""
+    if is_admin():
+        reiniciar = '''
+        <form method="POST" action="/reiniciar-restos" style="margin-bottom:12px">
+            <button class="r" onclick="return confirm('Apagar TODOS os restos?')">Reiniciar Restos</button>
+        </form>
+        '''
+    return render_template_string(T, content=f'''
+    <div class="card">
+        <h2>Restos</h2>
+        <p style="font-size:1.1rem;margin-bottom:10px">Total de Restos: <b>Kz {int(total)}</b></p>
+        {reiniciar}
+        <form method="POST">
+            <input name="descricao" placeholder="Descrição" required>
+            <input type="number" name="valor" placeholder="Valor" required>
+            <button>Registar</button>
+        </form>
+        <table>
+            <tr><th>Descrição</th><th>Valor</th><th>Data</th><th></th></tr>
+            {linhas}
+        </table>
+    </div>
+    ''')
+
+@app.route("/reiniciar-restos", methods=["POST"])
+def reiniciar_restos():
+    if not is_admin(): return redirect("/")
+    Resto.query.delete()
+    db.session.commit()
+    flash("Todos os restos foram apagados.")
+    return redirect("/restos")
 
 @app.route("/editar-resto/<int:id>", methods=["GET","POST"])
 def editar_resto(id):
