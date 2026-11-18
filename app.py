@@ -124,33 +124,39 @@ META_VENDA = 48000
 META_LUCRO = 15000
 
 T = """<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cantina FC Pira</title><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
-body{background:#f4f6f8;color:#222}
-body.dark{background:#121212;color:#e0e0e0}
-body.dark .card,body.dark .box,body.dark .stat{background:#1e1e1e;color:#e0e0e0}
-body.dark .top{background:#0a1929}
-body.dark th{background:#1a3a5c;color:#fff}
-body.dark input,body.dark select,body.dark textarea{background:#2a2a2a;color:#fff;border-color:#444}
-.top{background:#0d47a1;color:#fff;padding:12px 16px;position:sticky;top:0;z-index:50}
-.top h1{font-size:1.1rem}
-.top .user{font-size:.75rem;opacity:.85;margin-top:2px}
-.nav{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
-.nav a{background:rgba(255,255,255,.15);color:#fff;padding:5px 11px;border-radius:16px;text-decoration:none;font-size:.75rem}
-.c{max-width:920px;margin:0 auto;padding:12px}
-.card{background:#fff;border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-.card h2{font-size:1rem;margin-bottom:10px;color:#0d47a1}
-body.dark .card h2{color:#64b5f6}
-input,button,select,textarea{width:100%;padding:10px;margin:4px 0;border-radius:7px;border:1px solid #ddd;font-size:14px}
-button{background:#1565c0;color:#fff;border:none;font-weight:500;cursor:pointer}
-.g{background:#2e7d32}.o{background:#e65100}.r{background:#c62828}
-.s{width:auto;padding:6px 10px;font-size:12px;margin:2px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
-.box{background:#fff;border:1px solid #e3f2fd;border-radius:10px;padding:10px;text-align:center}
-.box.destaque{border:2px solid #ff9800;background:#fff8e1}
-.box b{display:block;color:#0d47a1;margin-bottom:3px}
-.box div{font-size:.75rem;color:#555;margin:2px 0}
-.stat{background:#fff;border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.08);border-top:4px solid #1565c0}
-.stat b{display:block;font-size:1.5rem;margin-top:6px;font-weight:700}
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{background:linear-gradient(145deg,#0f172a 0%,#1e3a5f 40%,#0d47a1 70%,#1565c0 100%);background-attachment:fixed;color:#1e293b;min-height:100vh}
+body.dark{background:linear-gradient(145deg,#020617 0%,#0f172a 50%,#1e293b 100%);color:#e2e8f0}
+body.dark .card,body.dark .box,body.dark .stat{background:rgba(30,41,59,.85);color:#e2e8f0;border:1px solid rgba(148,163,184,.15);backdrop-filter:blur(12px)}
+body.dark .top{background:rgba(2,6,23,.9);backdrop-filter:blur(16px)}
+body.dark th{background:rgba(30,58,92,.9);color:#fff}
+body.dark input,body.dark select,body.dark textarea{background:rgba(15,23,42,.8);color:#fff;border-color:rgba(148,163,184,.25)}
+.top{background:linear-gradient(135deg,rgba(13,71,161,.95),rgba(21,101,192,.9));color:#fff;padding:14px 18px;position:sticky;top:0;z-index:50;backdrop-filter:blur(16px);box-shadow:0 4px 24px rgba(0,0,0,.15);border-bottom:1px solid rgba(255,255,255,.1)}
+.top h1{font-size:1.15rem;font-weight:700;letter-spacing:.3px}
+.top .user{font-size:.75rem;opacity:.9;margin-top:3px}
+.nav{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.nav a{background:rgba(255,255,255,.12);color:#fff;padding:7px 14px;border-radius:20px;text-decoration:none;font-size:.75rem;font-weight:500;border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(8px);transition:all .2s ease}
+.nav a:hover{background:rgba(255,255,255,.25);transform:translateY(-1px)}
+.c{max-width:960px;margin:0 auto;padding:16px}
+.card{background:rgba(255,255,255,.92);border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 8px 32px rgba(15,23,42,.12);border:1px solid rgba(255,255,255,.6);backdrop-filter:blur(12px)}
+.card h2{font-size:1.05rem;margin-bottom:12px;color:#0d47a1;font-weight:700}
+body.dark .card h2{color:#90caf9}
+input,select,textarea{width:100%;padding:11px 14px;margin:5px 0;border-radius:12px;border:1px solid rgba(148,163,184,.35);font-size:14px;background:rgba(255,255,255,.9);transition:border .2s,box-shadow .2s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#42a5f5;box-shadow:0 0 0 3px rgba(66,165,245,.2)}
+button{width:100%;padding:11px 16px;margin:5px 0;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;color:#fff;background:linear-gradient(135deg,#1565c0,#42a5f5);box-shadow:0 4px 14px rgba(21,101,192,.35);border:1px solid rgba(255,255,255,.2);transition:all .2s ease}
+button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(21,101,192,.45)}
+.g{background:linear-gradient(135deg,#2e7d32,#66bb6a)!important;box-shadow:0 4px 14px rgba(46,125,50,.35)!important}
+.o{background:linear-gradient(135deg,#e65100,#ff9800)!important;box-shadow:0 4px 14px rgba(230,81,0,.35)!important}
+.r{background:linear-gradient(135deg,#c62828,#ef5350)!important;box-shadow:0 4px 14px rgba(198,40,40,.35)!important}
+.s{width:auto;padding:7px 12px;font-size:12px;margin:2px;border-radius:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.box{background:rgba(255,255,255,.9);border:1px solid rgba(227,242,253,.8);border-radius:14px;padding:14px;text-align:center;box-shadow:0 4px 16px rgba(15,23,42,.08);backdrop-filter:blur(8px);transition:transform .2s,box-shadow .2s}
+.box:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(15,23,42,.12)}
+.box.destaque{border:2px solid #ff9800;background:linear-gradient(180deg,#fff8e1,#fff)}
+.box b{display:block;color:#0d47a1;margin-bottom:4px;font-weight:700}
+.box div{font-size:.75rem;color:#546e7a;margin:3px 0}
+.stat{background:rgba(255,255,255,.95);border-radius:16px;padding:18px;text-align:center;box-shadow:0 6px 20px rgba(15,23,42,.1);border-top:4px solid #1565c0;backdrop-filter:blur(10px)}
+.stat b{display:block;font-size:1.55rem;margin-top:8px;font-weight:800}
 .stat.venda{border-top-color:#1565c0}.stat.venda b{color:#1565c0}
 .stat.lucro{border-top-color:#2e7d32}.stat.lucro b{color:#2e7d32}
 .stat.caixa{border-top-color:#f57c00}.stat.caixa b{color:#f57c00}
@@ -160,52 +166,52 @@ button{background:#1565c0;color:#fff;border:none;font-weight:500;cursor:pointer}
 .stat.stock{border-top-color:#c62828}.stat.stock b{color:#c62828}
 .stat.valor-stock{border-top-color:#6a1b9a}.stat.valor-stock b{color:#6a1b9a}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{background:#e3f2fd;padding:7px;text-align:left}
-td{padding:7px;border-bottom:1px solid #eee}
-.alerta{background:#ffebee;color:#c62828;padding:8px;border-radius:6px;margin-bottom:10px;font-size:.85rem}
-.flash{background:#e8f5e9;padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:.85rem}
-.btn{display:inline-block;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:500;margin:2px}
-.btn-blue{background:#1565c0;color:#fff}
-.btn-green{background:#2e7d32;color:#fff}
-.btn-orange{background:#e65100;color:#fff}
-.btn-red{background:#c62828;color:#fff}
-.btn-purple{background:#6a1b9a;color:#fff}
-.btn:hover{opacity:.9}
-.parabens{background:linear-gradient(135deg,#4caf50,#8bc34a);color:#fff;padding:20px;border-radius:10px;text-align:center;margin-bottom:12px;font-size:1.1rem}
+th{background:linear-gradient(135deg,#e3f2fd,#bbdefb);padding:10px;text-align:left;font-weight:600}
+td{padding:9px;border-bottom:1px solid rgba(0,0,0,.06)}
+.alerta{background:linear-gradient(135deg,#ffebee,#ffcdd2);color:#c62828;padding:10px 14px;border-radius:12px;margin-bottom:12px;font-size:.85rem}
+.flash{background:linear-gradient(135deg,#e8f5e9,#c8e6c9);padding:10px 14px;border-radius:12px;margin-bottom:12px;font-size:.85rem}
+.btn{display:inline-block;padding:8px 14px;border-radius:12px;text-decoration:none;font-size:12px;font-weight:600;margin:3px;color:#fff;background:linear-gradient(135deg,#1565c0,#42a5f5);box-shadow:0 3px 10px rgba(21,101,192,.3);border:1px solid rgba(255,255,255,.2);transition:all .2s}
+.btn:hover{transform:translateY(-1px);opacity:.95}
+.btn-blue{background:linear-gradient(135deg,#1565c0,#42a5f5)}
+.btn-green{background:linear-gradient(135deg,#2e7d32,#66bb6a)}
+.btn-orange{background:linear-gradient(135deg,#e65100,#ff9800)}
+.btn-red{background:linear-gradient(135deg,#c62828,#ef5350)}
+.btn-purple{background:linear-gradient(135deg,#6a1b9a,#ab47bc)}
+.parabens{background:linear-gradient(135deg,#2e7d32,#66bb6a);color:#fff;padding:22px;border-radius:16px;text-align:center;margin-bottom:14px;box-shadow:0 8px 24px rgba(46,125,50,.3)}
 .parabens h3{margin-bottom:8px;font-size:1.3rem}
-.lucro{color:#2e7d32;font-weight:600}
-.lucro-baixo{color:#c62828;font-weight:600}
-.qty{width:60px !important;padding:6px;text-align:center;display:inline-block;margin:0 2px}
+.lucro{color:#2e7d32;font-weight:700}
+.lucro-baixo{color:#c62828;font-weight:700}
+.qty{width:60px !important;padding:7px;text-align:center;display:inline-block;margin:0 2px;border-radius:10px}
 .bar-container{display:flex;align-items:flex-end;height:120px;gap:4px;overflow-x:auto;padding-bottom:8px}
 .bar{display:flex;flex-direction:column;align-items:center;min-width:32px}
-.bar-fill{background:linear-gradient(to top,#1565c0,#42a5f5);border-radius:4px 4px 0 0;width:28px}
-.bar-label{font-size:.65rem;margin-top:4px;color:#555}
-.filtro{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.filtro a{padding:6px 12px;background:#e3f2fd;border-radius:16px;text-decoration:none;color:#0d47a1;font-size:.8rem}
-.filtro a.ativo{background:#1565c0;color:#fff}
-.calc-float{position:fixed;top:80px;right:20px;width:280px;background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.2);z-index:1000;display:none;padding:12px}
+.bar-fill{background:linear-gradient(to top,#1565c0,#42a5f5);border-radius:6px 6px 0 0;width:28px}
+.bar-label{font-size:.65rem;margin-top:4px;color:#546e7a}
+.filtro{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filtro a{padding:7px 14px;background:rgba(227,242,253,.9);border-radius:20px;text-decoration:none;color:#0d47a1;font-size:.8rem;font-weight:500;border:1px solid rgba(21,101,192,.15);transition:all .2s}
+.filtro a.ativo,.filtro a:hover{background:linear-gradient(135deg,#1565c0,#42a5f5);color:#fff}
+.calc-float{position:fixed;top:80px;right:20px;width:280px;background:rgba(255,255,255,.95);border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.2);z-index:1000;display:none;padding:14px;backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.5)}
 .calc-float.show{display:block}
-.calc-display{background:#1e1e1e;color:#fff;font-size:1.4rem;text-align:right;padding:12px;border-radius:8px;margin-bottom:8px;min-height:48px}
+.calc-display{background:linear-gradient(135deg,#1e1e1e,#333);color:#fff;font-size:1.4rem;text-align:right;padding:14px;border-radius:12px;margin-bottom:10px;min-height:48px}
 .calc-buttons{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.calc-buttons button{font-size:.95rem;padding:10px;border-radius:6px;font-weight:500}
-.calc-buttons .op{background:#e65100}
-.calc-buttons .eq{background:#2e7d32}
-.calc-buttons .clear{background:#c62828}
+.calc-buttons button{font-size:.95rem;padding:11px;border-radius:10px;font-weight:600}
+.calc-buttons .op{background:linear-gradient(135deg,#e65100,#ff9800)!important}
+.calc-buttons .eq{background:linear-gradient(135deg,#2e7d32,#66bb6a)!important}
+.calc-buttons .clear{background:linear-gradient(135deg,#c62828,#ef5350)!important}
 .calc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.calc-header span{font-weight:600;color:#0d47a1}
-.calc-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:#666;width:auto;padding:0}
-.bemvindo{background:linear-gradient(135deg,#1565c0,#42a5f5);color:#fff;padding:16px;border-radius:10px;margin-bottom:12px}
+.calc-header span{font-weight:700;color:#0d47a1}
+.calc-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:#666;width:auto;padding:0;box-shadow:none}
+.bemvindo{background:linear-gradient(135deg,#1565c0,#42a5f5);color:#fff;padding:18px;border-radius:16px;margin-bottom:14px;box-shadow:0 8px 24px rgba(21,101,192,.3)}
 .bemvindo.alerta-msg{background:linear-gradient(135deg,#e65100,#ff9800)}
 .bemvindo.sucesso{background:linear-gradient(135deg,#2e7d32,#66bb6a)}
 .bemvindo h3{margin-bottom:6px}
 .bemvindo ul{margin:8px 0 0 18px;font-size:.9rem}
-.bemvindo button{width:auto;margin-top:8px;background:#fff;color:#1565c0}
-.avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#1565c0;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:600;font-size:.9rem}
-.alerta-item{display:flex;gap:12px;align-items:flex-start;padding:12px;border-bottom:1px solid #eee}
-.msg{padding:10px;border-radius:8px;margin:6px 0;max-width:80%}
-.msg.mine{background:#e3f2fd;margin-left:auto}
-.msg.other{background:#f5f5f5}
-.resumo-item{padding:10px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between}
+.bemvindo button{width:auto;margin-top:10px;background:rgba(255,255,255,.95);color:#1565c0;box-shadow:none}
+.avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;background:linear-gradient(135deg,#1565c0,#42a5f5);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem}
+.alerta-item{display:flex;gap:12px;align-items:flex-start;padding:12px;border-bottom:1px solid rgba(0,0,0,.05)}
+.msg{padding:10px 14px;border-radius:14px;margin:6px 0;max-width:80%}
+.msg.mine{background:linear-gradient(135deg,#e3f2fd,#bbdefb);margin-left:auto}
+.msg.other{background:rgba(245,245,245,.9)}
+.resumo-item{padding:12px 0;border-bottom:1px solid rgba(0,0,0,.06);display:flex;justify-content:space-between}
 .resumo-item b{font-size:1.1rem}
 </style></head><body id="body">{% if session.get('user_id') %}<div class="top"><h1>Cantina FC Pira</h1><div class="user">{{ session.get('nome','') }}</div><div class="nav"><a href="/">Vender</a><a href="/dashboard">Dashboard</a>{% if session.get('perm_resumo') or session.get('tipo')=='admin' %}<a href="/resumo">Resumo do Dia</a>{% endif %}{% if session.get('perm_mensagens') or session.get('tipo')=='admin' %}<a href="/mensagens">Mensagens</a>{% endif %}<a href="/alertas">Alertas</a>{% if session.get('tipo')=='admin' %}<a href="/hoje">Hoje</a><a href="/historico">Historico</a><a href="/relatorio">Relatorio</a><a href="/lucro">Lucro</a><a href="/caixa">Caixa</a><a href="/produtos">Produtos</a><a href="/stock">Stock</a><a href="/compras">Compras</a><a href="/restos">Restos</a><a href="/categorias">Categorias</a><a href="/exportar">Exportar</a><a href="/utilizadores">Utilizadores</a><a href="/mensal">Mensal</a><a href="/ranking">Ranking</a><a href="/horas">Horas de Pico</a><a href="/valor-stock">Valor em Stock</a>{% else %}{% if session.get('perm_hoje') %}<a href="/hoje">Hoje</a>{% endif %}{% if session.get('perm_historico') %}<a href="/historico">Historico</a>{% endif %}{% if session.get('perm_relatorio') %}<a href="/relatorio">Relatorio</a>{% endif %}{% if session.get('perm_lucro') %}<a href="/lucro">Lucro</a>{% endif %}{% if session.get('perm_caixa') %}<a href="/caixa">Caixa</a>{% endif %}{% if session.get('perm_produtos') %}<a href="/produtos">Produtos</a>{% endif %}{% if session.get('perm_stock') %}<a href="/stock">Stock</a>{% endif %}{% if session.get('perm_compras') %}<a href="/compras">Compras</a>{% endif %}{% if session.get('perm_restos') %}<a href="/restos">Restos</a>{% endif %}{% if session.get('perm_categorias') %}<a href="/categorias">Categorias</a>{% endif %}{% endif %}<a href="#" onclick="toggleCalc();return false;">Calculadora</a><a href="#" onclick="toggleDark();return false;">Modo</a><a href="/logout">Sair</a></div></div>{% endif %}<div class="c">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat, msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}{{ content|safe }}</div>
 <div class="calc-float" id="calcFloat">
@@ -303,37 +309,27 @@ def gerar_alertas(uid):
     nome = user.nome
     hoje = date.today()
     hora = datetime.now().hour
-
     baixos = Produto.query.filter(Produto.quantidade <= Produto.stock_minimo).count()
     fechado = dia_fechado(uid)
-
     alertas = []
     tipo = "info"
-
     if baixos > 0:
         alertas.append(f"Atenção: tens {baixos} produto(s) com stock baixo. Verifica e reabastece se for necessário.")
         tipo = "alerta"
-
     if hora >= 16 and not fechado:
         alertas.append("Lembra-te: no final do dia vai a Hoje e clica em Finalizar Dia para guardar o relatório.")
-
     if not alertas:
         return ""
-
     for msg in alertas:
         existe = Alerta.query.filter_by(user_id=uid, mensagem=msg).filter(db.func.date(Alerta.data)==hoje).first()
         if not existe:
             db.session.add(Alerta(user_id=uid, mensagem=msg, tipo=tipo))
     db.session.commit()
-
     abertos = Alerta.query.filter_by(user_id=uid, fechado=False).filter(db.func.date(Alerta.data)==hoje).all()
     if not abertos: return ""
-
     classe = "bemvindo alerta-msg" if tipo == "alerta" else "bemvindo"
-
     lista = "".join(f"<li>{a.mensagem}</li>" for a in abertos)
     ids = ",".join(str(a.id) for a in abertos)
-
     return f'''
     <div class="{classe}" id="bemvindo">
         <h3>Olá {nome}!</h3>
@@ -365,7 +361,6 @@ def alertas():
         alertas_list = Alerta.query.order_by(Alerta.data.desc()).limit(100).all()
     else:
         alertas_list = Alerta.query.filter_by(user_id=session["user_id"]).order_by(Alerta.data.desc()).limit(50).all()
-    
     linhas = ""
     for a in alertas_list:
         avatar = foto_html(a.usuario)
@@ -407,15 +402,11 @@ def resumo():
     bruto = sum(v.valor_total for v in vendas)
     lucro = sum(v.lucro or 0 for v in vendas)
     qtd_vendas = len(vendas)
-    
     compras = Compra.query.filter(db.func.date(Compra.data)==hoje).all()
     total_compras = sum(c.valor for c in compras)
-    
     restos = Resto.query.filter(db.func.date(Resto.data)==hoje).all()
     total_restos = sum(r.valor for r in restos)
-    
     baixos = Produto.query.filter(Produto.quantidade <= Produto.stock_minimo).count()
-    
     html = f'''
     <div class="card">
         <h2>Resumo do Dia</h2>
@@ -438,16 +429,13 @@ def mensagens():
     admin = Usuario.query.filter_by(tipo="admin").first()
     if not admin:
         return render_template_string(T, content='<div class="card">Nenhum administrador encontrado.</div>')
-    
     outro_id = admin.id if not is_admin() else request.args.get("para", type=int)
     if is_admin() and not outro_id:
         users = Usuario.query.filter(Usuario.tipo != "admin").all()
         links = "".join(f'<p><a href="/mensagens?para={u.id}" class="btn btn-blue">{u.nome}</a></p>' for u in users)
         return render_template_string(T, content='<div class="card"><h2>Mensagens</h2><p>Escolhe o funcionário:</p>'+links+'</div>')
-    
     hoje = date.today()
     enviadas_hoje = Mensagem.query.filter(Mensagem.de_user_id==uid, db.func.date(Mensagem.data)==hoje).count()
-    
     if request.method == "POST":
         if enviadas_hoje >= 5:
             flash("Limite de 5 mensagens por dia atingido.")
@@ -459,7 +447,6 @@ def mensagens():
             db.session.commit()
             flash("Mensagem enviada")
         return redirect(request.url)
-    
     if is_admin():
         msgs = Mensagem.query.filter(
             ((Mensagem.de_user_id==uid) & (Mensagem.para_user_id==outro_id)) |
@@ -470,19 +457,16 @@ def mensagens():
             ((Mensagem.de_user_id==uid) & (Mensagem.para_user_id==admin.id)) |
             ((Mensagem.de_user_id==admin.id) & (Mensagem.para_user_id==uid))
         ).order_by(Mensagem.data).all()
-    
     chat = ""
     for m in msgs:
         classe = "msg mine" if m.de_user_id == uid else "msg other"
         chat += f'<div class="{classe}"><div style="font-size:.75rem;color:#666">{m.de_user.nome} · {m.data.strftime("%d/%m %H:%M")}</div><div>{m.texto}</div></div>'
-    
     aviso = f'<p style="color:#c62828;font-size:.85rem">Já enviaste {enviadas_hoje}/5 mensagens hoje.</p>' if enviadas_hoje >= 3 else ""
     form = ""
     if enviadas_hoje < 5:
         form = '<form method="POST"><textarea name="texto" placeholder="Escreve a mensagem..." required></textarea><button>Enviar</button></form>'
     else:
         form = '<p style="color:#c62828">Limite diário de mensagens atingido.</p>'
-    
     titulo = "Mensagens com " + (admin.nome if not is_admin() else Usuario.query.get(outro_id).nome)
     return render_template_string(T, content=f'<div class="card"><h2>{titulo}</h2>{aviso}{chat}{form}</div>')
 
@@ -733,10 +717,8 @@ def ranking():
     else:
         vendas = Venda.query.filter(db.func.date(Venda.data)==date.today())
         titulo = "Ranking de Hoje"
-    
     if cat_id:
         vendas = vendas.join(Produto).filter(Produto.categoria_id == int(cat_id))
-    
     vendas = vendas.all()
     por_produto = {}
     for v in vendas:
@@ -746,24 +728,20 @@ def ranking():
         por_produto[nome]["qtd"] += v.quantidade
         por_produto[nome]["valor"] += v.valor_total
         por_produto[nome]["lucro"] += v.lucro or 0
-    
     ranking = sorted(por_produto.items(), key=lambda x: x[1]["valor"], reverse=True)
     linhas = ""
     for i, (nome, dados) in enumerate(ranking, 1):
         linhas += "<tr><td>"+str(i)+"</td><td>"+nome+"</td><td>"+str(dados["qtd"])+"</td><td>Kz "+str(int(dados["valor"]))+"</td><td>Kz "+str(int(dados["lucro"]))+"</td></tr>"
-    
     filtros = '<div class="filtro">'
     for p, label in [("hoje","Hoje"),("ontem","Ontem"),("7dias","7 Dias"),("30dias","30 Dias"),("mes","Mês")]:
         cls = " ativo" if periodo == p else ""
         filtros += '<a href="/ranking?periodo='+p+('&categoria='+cat_id if cat_id else '')+'" class="'+cls+'">'+label+'</a>'
     filtros += '</div>'
-    
     cats = Categoria.query.all()
     cat_sel = '<select name="categoria" onchange="location.href=\'/ranking?periodo='+periodo+'&categoria=\'+this.value"><option value="">Todas as categorias</option>'
     for c in cats:
         cat_sel += '<option value="'+str(c.id)+'"'+(' selected' if str(c.id)==cat_id else '')+'>'+c.nome+'</option>'
     cat_sel += '</select>'
-    
     return render_template_string(T, content='<div class="card"><h2>'+titulo+'</h2>'+filtros+cat_sel+'<table><tr><th>#</th><th>Produto</th><th>Quantidade</th><th>Valor Total</th><th>Lucro</th></tr>'+linhas+'</table></div>')
 
 @app.route("/horas")
@@ -884,42 +862,31 @@ def dashboard():
     uid = session["user_id"]
     hoje = date.today()
     ontem = hoje - timedelta(days=1)
-    
     vendas_hoje = Venda.query.filter(db.func.date(Venda.data)==hoje).all()
     vendas_ontem = Venda.query.filter(db.func.date(Venda.data)==ontem).all()
-    
     bruto_hoje = sum(v.valor_total for v in vendas_hoje)
     lucro_hoje = sum(v.lucro or 0 for v in vendas_hoje)
     bruto_ontem = sum(v.valor_total for v in vendas_ontem)
     lucro_ontem = sum(v.lucro or 0 for v in vendas_ontem)
-    
     caixa = get_caixa()
     cv = caixa.valor
-    
-    # TOTAL real de todas as Compras e Restos (não só de hoje)
     total_compras = sum(c.valor for c in Compra.query.all())
     total_restos = sum(r.valor for r in Resto.query.all())
-    
     baixos = Produto.query.filter(Produto.quantidade <= Produto.stock_minimo).count()
     valor_stock = 0
     for p in Produto.query.all():
         custo_un = calcular_custo_unidade(p.preco_compra or 0, p.unidades_caixa or 1)
         valor_stock += custo_un * p.quantidade
-    
     meta_msg = ""
     if bruto_hoje >= META_VENDA:
         meta_msg += '<div class="parabens"><h3>Parabéns!</h3><p>Meta de vendas atingida!</p></div>'
     if lucro_hoje >= META_LUCRO:
         meta_msg += '<div class="parabens"><h3>Parabéns!</h3><p>Meta de lucro atingida!</p></div>'
-    
     botao_reiniciar = ""
     if is_admin():
         botao_reiniciar = '<form method="POST" action="/reiniciar-dashboard" style="margin-top:12px"><button class="r">Reiniciar Dashboard (só vendas de hoje)</button></form>'
-    
     bemvindo = gerar_alertas(uid)
-    
     chart_data = f"[{int(bruto_hoje)},{int(lucro_hoje)},{int(cv)}]"
-    
     return render_template_string(T, content=bemvindo+meta_msg+'''
     <h2>Dashboard</h2>
     <div class="grid">
@@ -1060,7 +1027,6 @@ def compras():
     linhas = ""
     for c in items:
         linhas += "<tr><td>"+c.descricao+"</td><td>Kz "+str(int(c.valor))+"</td><td>"+c.data.strftime("%d/%m/%Y")+"</td><td><a href='/editar-compra/"+str(c.id)+"' class='btn btn-blue'>Editar</a></td></tr>"
-    
     total = sum(c.valor for c in items)
     reiniciar = ""
     if is_admin():
@@ -1118,7 +1084,6 @@ def restos():
     linhas = ""
     for r in items:
         linhas += "<tr><td>"+r.descricao+"</td><td>Kz "+str(int(r.valor))+"</td><td>"+r.data.strftime("%d/%m/%Y")+"</td><td><a href='/editar-resto/"+str(r.id)+"' class='btn btn-blue'>Editar</a></td></tr>"
-    
     total = sum(r.valor for r in items)
     reiniciar = ""
     if is_admin():
